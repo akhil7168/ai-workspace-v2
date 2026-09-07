@@ -3,11 +3,16 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 class Settings(BaseSettings):
     APP_NAME: str
+
     DATABASE_URL: str
 
     SECRET_KEY: str
-    ACCESS_TOKEN_EXPIRE_MINUTES: int
+
     ALGORITHM: str
+
+    ACCESS_TOKEN_EXPIRE_MINUTES: int
+
+    REFRESH_TOKEN_EXPIRE_DAYS: int
 
     ENVIRONMENT: str = "development"
 
