@@ -1,51 +1,52 @@
+from enum import Enum
 import uuid
 
-from sqlalchemy import Boolean
-from sqlalchemy import String
+from sqlalchemy import Boolean, Column, String
 from sqlalchemy.dialects.postgresql import UUID
-from sqlalchemy.orm import Mapped
-from sqlalchemy.orm import mapped_column
 
-from app.models.base import Base
-from app.models.base import TimestampMixin
+from app.db.base import Base
 
 
-class User(Base, TimestampMixin):
-    """
-    User database table.
-    """
+class UserRole(str, Enum):
+    ADMIN = "ADMIN"
+    USER = "USER"
+    AGENT = "AGENT"
+
+
+class User(Base):
 
     __tablename__ = "users"
 
-    id: Mapped[uuid.UUID] = mapped_column(
+    id = Column(
         UUID(as_uuid=True),
         primary_key=True,
         default=uuid.uuid4
     )
 
-    full_name: Mapped[str] = mapped_column(
-        String(120),
+    full_name = Column(
+        String(100),
         nullable=False
     )
 
-    email: Mapped[str] = mapped_column(
+    email = Column(
         String(255),
         unique=True,
-        index=True,
-        nullable=False
+        nullable=False,
+        index=True
     )
 
-    password_hash: Mapped[str] = mapped_column(
+    hashed_password = Column(
         String(255),
         nullable=False
     )
 
-    is_active: Mapped[bool] = mapped_column(
+    is_active = Column(
         Boolean,
         default=True
     )
 
-    is_superuser: Mapped[bool] = mapped_column(
-        Boolean,
-        default=False
+    role = Column(
+        String(20),
+        default=UserRole.USER.value,
+        nullable=False
     )

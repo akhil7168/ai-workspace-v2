@@ -1,38 +1,84 @@
-from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.models.user import User
 
 
 class UserRepository:
-    """User database repository."""
 
     def __init__(self, db: Session):
         self.db = db
 
-    def create(self, user: User) -> User:
+    # -----------------------------------
+    # Create User
+    # -----------------------------------
+
+    def create(self, user: User):
+
         self.db.add(user)
         self.db.commit()
         self.db.refresh(user)
+
         return user
+
+    # -----------------------------------
+    # Find by Email
+    # -----------------------------------
 
     def get_by_email(self, email: str):
-        stmt = select(User).where(User.email == email)
-        return self.db.scalar(stmt)
 
-    def get_by_id(self, user_id):
-        stmt = select(User).where(User.id == user_id)
-        return self.db.scalar(stmt)
+        return (
+            self.db.query(User)
+            .filter(User.email == email)
+            .first()
+        )
 
-    def get_all(self):
-        stmt = select(User).order_by(User.created_at.desc())
-        return list(self.db.scalars(stmt))
+    # -----------------------------------
+    # Find by ID
+    # -----------------------------------
 
-    def update(self, user: User):
+    def get_by_id(self, user_id: str):
+
+        return (
+            self.db.query(User)
+            .filter(User.id == user_id)
+            .first()
+        )
+
+    # -----------------------------------
+    # Update Profile
+    # -----------------------------------
+
+    def update_profile(
+        self,
+        user: User,
+        full_name: str | None,
+        email: str | None,
+    ):
+
+        if full_name is not None:
+            user.full_name = full_name
+
+        if email is not None:
+            user.email = email
+
         self.db.commit()
         self.db.refresh(user)
+
         return user
 
-    def delete(self, user: User):
-        self.db.delete(user)
+    # -----------------------------------
+    # Update Password
+    # -----------------------------------
+
+    def update_password(
+        self,
+        user: User,
+        hashed_password: str,
+    ):
+
+        user.hashed_password = hashed_password
+
         self.db.commit()
+        self.db.refresh(user)
+
+        return user
