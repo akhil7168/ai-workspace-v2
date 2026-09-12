@@ -1,4 +1,4 @@
-from fastapi import FastAPI
+from fastapi import FastAPI  # pyright: ignore[reportMissingImports]
 
 from app.api.auth import router as auth_router
 from app.api.users import router as users_router

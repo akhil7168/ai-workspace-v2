@@ -1,9 +1,9 @@
 from datetime import datetime, timezone
 
-from sqlalchemy import DateTime
-from sqlalchemy.orm import DeclarativeBase
-from sqlalchemy.orm import Mapped
-from sqlalchemy.orm import mapped_column
+from sqlalchemy import DateTime  # type: ignore[reportMissingImports]
+from sqlalchemy.orm import DeclarativeBase  # type: ignore[reportMissingImports]
+from sqlalchemy.orm import Mapped  # type: ignore[reportMissingImports]
+from sqlalchemy.orm import mapped_column  # type: ignore[reportMissingImports]
 
 
 class Base(DeclarativeBase):

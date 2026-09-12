@@ -1,8 +1,8 @@
 from enum import Enum
 import uuid
 
-from sqlalchemy import Boolean, Column, String
-from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy import Boolean, Column, String  # type: ignore[import-not-found]
+from sqlalchemy.dialects.postgresql import UUID  # type: ignore[import-not-found]
 
 from app.db.base import Base
 

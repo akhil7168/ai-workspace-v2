@@ -36,7 +36,9 @@ class AuthService:
         user = User(
             full_name=payload.full_name,
             email=payload.email,
-            password_hash=hash_password(payload.password)
+            hashed_password=hash_password(payload.password),  # ✅ Correct
+            is_active=True,
+            role="USER",
         )
 
         created_user = self.repository.create(user)
@@ -75,9 +77,9 @@ class AuthService:
             )
 
         if not verify_password(
-            password,
-            user.password_hash
-        ):
+                password,
+                user.hashed_password
+            ):
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Invalid email or password."

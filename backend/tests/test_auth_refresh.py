@@ -1,6 +1,9 @@
 from uuid import uuid4
 
-from fastapi.testclient import TestClient
+try:
+    from fastapi.testclient import TestClient
+except ModuleNotFoundError:
+    from starlette.testclient import TestClient
 
 from app.main import app
 

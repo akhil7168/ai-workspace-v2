@@ -1,13 +1,21 @@
-from sqlalchemy.orm import sessionmaker
+from sqlalchemy import create_engine  # pyright: ignore[reportMissingImports]
+from sqlalchemy.orm import declarative_base  # pyright: ignore[reportMissingImports]
+from sqlalchemy.orm import sessionmaker  # pyright: ignore[reportMissingImports]
 
-from app.core.database import engine
+from app.core.config import settings
 
+engine = create_engine(
+    settings.DATABASE_URL,
+    pool_pre_ping=True,
+)
 
 SessionLocal = sessionmaker(
-    bind=engine,
+    autocommit=False,
     autoflush=False,
-    autocommit=False
+    bind=engine,
 )
+
+Base = declarative_base()
 
 
 def get_db():
@@ -15,6 +23,5 @@ def get_db():
 
     try:
         yield db
-
     finally:
         db.close()
