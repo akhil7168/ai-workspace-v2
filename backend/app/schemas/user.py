@@ -1,16 +1,13 @@
+from pydantic import BaseModel, EmailStr, Field, ConfigDict
+from typing import Optional
 from uuid import UUID
 
-from pydantic import BaseModel
-from pydantic import ConfigDict
-from pydantic import EmailStr
-from pydantic import Field
-from typing import Optional
-
+# ---------- Authentication ----------
 
 class UserCreate(BaseModel):
-    full_name: str = Field(min_length=2, max_length=100)
+    full_name: str = Field(..., min_length=2, max_length=100)
     email: EmailStr
-    password: str = Field(min_length=8)
+    password: str = Field(..., min_length=8)
 
 
 class UserLogin(BaseModel):
@@ -18,37 +15,28 @@ class UserLogin(BaseModel):
     password: str
 
 
+# ---------- User Response ----------
+
+from uuid import UUID
+
 class UserResponse(BaseModel):
     id: UUID
     full_name: str
     email: EmailStr
+    role: str
     is_active: bool
 
     model_config = ConfigDict(from_attributes=True)
 
-class UserUpdate(BaseModel):
-    full_name: Optional[str] = Field(
-        default=None,
-        min_length=2,
-        max_length=100
-    )
 
-    email: Optional[EmailStr] = None
+# ---------- Profile Update ----------
 
+class UserProfileUpdate(BaseModel):
+    full_name: Optional[str] = Field(default=None, min_length=2, max_length=100)
+
+
+# ---------- Password Update ----------
 
 class PasswordUpdate(BaseModel):
-    current_password: str = Field(min_length=8)
-    new_password: str = Field(min_length=8)
-
-
-class UserResponse(BaseModel):
-
-    id: UUID
-    full_name: str
-    email: EmailStr
-    is_active: bool
-    role: str
-
-    model_config = ConfigDict(
-        from_attributes=True
-    )
+    current_password: str
+    new_password: str = Field(..., min_length=8)

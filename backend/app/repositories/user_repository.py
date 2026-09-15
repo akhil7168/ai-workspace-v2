@@ -1,11 +1,13 @@
-from sqlalchemy.orm import Session
+from typing import Any
 
 from app.models.user import User
+
+from uuid import UUID
 
 
 class UserRepository:
 
-    def __init__(self, db: Session):
+    def __init__(self, db: Any):
         self.db = db
 
     # -----------------------------------
@@ -36,13 +38,12 @@ class UserRepository:
     # Find by ID
     # -----------------------------------
 
-    def get_by_id(self, user_id: str):
-
+    def get_by_id(self, user_id: UUID):
         return (
             self.db.query(User)
             .filter(User.id == user_id)
             .first()
-        )
+    )
 
     # -----------------------------------
     # Update Profile

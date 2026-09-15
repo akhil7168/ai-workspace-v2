@@ -1,91 +1,68 @@
-from fastapi import HTTPException, status
-from sqlalchemy.orm import Session
-
-from app.models.user import User
+from fastapi import HTTPException, status  # pyright: ignore[reportMissingImports]
+from sqlalchemy.orm import Session  # pyright: ignore[reportMissingImports]
+from uuid import UUID
+from app.core.security import hash_password, verify_password
 from app.repositories.user_repository import UserRepository
-from app.schemas.user import UserUpdate
-from app.core.security import verify_password, hash_password
+from app.schemas.user import UserProfileUpdate, PasswordUpdate
 
 
 class UserService:
-
     def __init__(self, db: Session):
         self.repository = UserRepository(db)
 
-    # -----------------------------------
-    # Current User
-    # -----------------------------------
-
-    def get_me(self, current_user: User):
-
-        return current_user
-
-    # -----------------------------------
-    # Profile
-    # -----------------------------------
-
-    def get_profile(self, current_user: User):
-
-        return current_user
-
-    # -----------------------------------
+    # -------------------------
     # Update Profile
-    # -----------------------------------
-
+    # -------------------------
     def update_profile(
-        self,
-        current_user: User,
-        profile: UserUpdate,
-    ):
+    self,
+    user_id: UUID,
+    payload: UserProfileUpdate,
+):
+        user = self.repository.get_by_id(user_id)
 
-        # Prevent duplicate email
-
-        if (
-            profile.email
-            and profile.email != current_user.email
-        ):
-
-            existing = self.repository.get_by_email(
-                profile.email
+        if not user:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="User not found",
             )
 
-            if existing:
+        if payload.full_name is not None:
+            user.full_name = payload.full_name
 
-                raise HTTPException(
-                    status_code=status.HTTP_409_CONFLICT,
-                    detail="Email already registered.",
-                )
+        self.repository.db.commit()
+        self.repository.db.refresh(user)
 
-        return self.repository.update_profile(
-            current_user,
-            full_name=profile.full_name,
-            email=profile.email,
-        )
+        return user
 
-    # -----------------------------------
-    # Change Password
-    # -----------------------------------
+    # -------------------------
+    # Update Password
+    # -------------------------
+    def update_password(
+    self,
+    user_id: UUID,
+    payload: PasswordUpdate,
+):
+        user = self.repository.get_by_id(user_id)
 
-    def change_password(
-        self,
-        current_user: User,
-        current_password: str,
-        new_password: str,
-    ):
+        if not user:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="User not found",
+            )
 
         if not verify_password(
-            current_password,
-            current_user.hashed_password,
+            payload.current_password,
+            user.hashed_password,
         ):
-
             raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Current password is incorrect.",
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Current password is incorrect",
             )
 
-        hashed = hash_password(new_password)
+        user.hashed_password = hash_password(payload.new_password)
 
-        return self.repository.update_password(
-            current_user,
-            hashed,
-        )
+        self.repository.db.commit()
+
+        return {
+            "message": "Password updated successfully"
+        }

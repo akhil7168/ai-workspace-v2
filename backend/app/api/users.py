@@ -1,20 +1,20 @@
+# FastAPI is provided by the backend environment.
+# pyright: reportMissingImports=false
 from fastapi import APIRouter, Depends
-from sqlalchemy.orm import Session
+from typing import Any
 
-from app.core.auth import get_current_user
+from app.core.auth import (
+    get_current_user,
+    require_roles,
+)
 from app.db.session import get_db
-
-from app.models.user import User
-
 from app.schemas.user import (
     UserResponse,
-    UserUpdate,
+    UserProfileUpdate,
     PasswordUpdate,
 )
-from app.core.auth import require_roles
-from app.models.user import UserRole
-
 from app.services.user_service import UserService
+from app.models.user import UserRole
 
 router = APIRouter(
     prefix="/users",
@@ -31,10 +31,9 @@ router = APIRouter(
     response_model=UserResponse,
 )
 def get_me(
-    current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db),
+    current_user=Depends(get_current_user),
 ):
-    return UserService(db).get_me(current_user)
+    return current_user
 
 
 # ------------------------------------------------
@@ -46,10 +45,9 @@ def get_me(
     response_model=UserResponse,
 )
 def get_profile(
-    current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db),
+    current_user=Depends(get_current_user),
 ):
-    return UserService(db).get_profile(current_user)
+    return current_user
 
 
 # ------------------------------------------------
@@ -61,13 +59,15 @@ def get_profile(
     response_model=UserResponse,
 )
 def update_profile(
-    profile: UserUpdate,
-    current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db),
+    payload: UserProfileUpdate,
+    db: Any = Depends(get_db),
+    current_user=Depends(get_current_user),
 ):
-    return UserService(db).update_profile(
-        current_user,
-        profile,
+    service = UserService(db)
+
+    return service.update_profile(
+        current_user.id,
+        payload,
     )
 
 
@@ -76,20 +76,17 @@ def update_profile(
 # ------------------------------------------------
 
 @router.patch("/password")
-def change_password(
-    password_data: PasswordUpdate,
-    current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db),
+def update_password(
+    payload: PasswordUpdate,
+    db: Any = Depends(get_db),
+    current_user=Depends(get_current_user),
 ):
-    UserService(db).change_password(
-        current_user=current_user,
-        current_password=password_data.current_password,
-        new_password=password_data.new_password,
-    )
+    service = UserService(db)
 
-    return {
-        "message": "Password updated successfully."
-    }
+    return service.update_password(
+        current_user.id,
+        payload,
+    )
 
 # ----------------------------------------------------
 # ADMIN DEMO API

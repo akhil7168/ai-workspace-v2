@@ -1,91 +1,74 @@
-from fastapi import Depends, HTTPException, status
-from fastapi.security.oauth2 import OAuth2PasswordBearer
+from fastapi import Depends, HTTPException, status  # type: ignore[import-not-found]
+from fastapi.security import OAuth2PasswordBearer  # type: ignore[import-not-found]
+from typing import Any
 
-from jose import JWTError
-
-from sqlalchemy.orm import Session
-from typing import Callable
-
-from app.models.user import UserRole
-
+from app.core.security import decode_token
 from app.db.session import get_db
-from app.services.token_service import TokenService
 from app.repositories.user_repository import UserRepository
 
-oauth2_scheme = OAuth2PasswordBearer(
-    tokenUrl="/auth/login"
-)
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login")
 
-
-# --------------------------------------------------
-# Decode Access Token
-# --------------------------------------------------
-
-def get_current_user_payload(
-    token: str = Depends(oauth2_scheme)
-):
-
-    payload = TokenService.decode_token(token)
-
-    if payload is None:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid or expired access token.",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
-
-    if payload.get("type") != "access":
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Access token required.",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
-
-    return payload
-
-
-# --------------------------------------------------
-# Get Current User Object
-# --------------------------------------------------
 
 def get_current_user(
-    payload=Depends(get_current_user_payload),
-    db: Session = Depends(get_db)
+    token: str = Depends(oauth2_scheme),
+    db: Any = Depends(get_db),
 ):
+    """
+    Decode JWT token and return authenticated user.
+    """
+
+    payload = decode_token(token)
+
+    if not payload:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid or expired token",
+        )
+
+    email = payload.get("sub")
+
+    if email is None:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Token payload is invalid",
+        )
 
     repository = UserRepository(db)
 
-    user = repository.get_by_email(payload["email"])
+    user = repository.get_by_email(email)
 
     if user is None:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Authenticated user not found."
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="User not found",
         )
 
     return user
 
-# ----------------------------------------------------
-# Role Authorization Dependency
-# ----------------------------------------------------
 
-def require_roles(
-    *allowed_roles: UserRole,
-) -> Callable:
+def require_roles(*allowed_roles: str):
+    """
+    RBAC dependency.
+    Usage:
+        Depends(require_roles("ADMIN"))
+        Depends(require_roles("ADMIN", "USER"))
+    """
 
-    def dependency(
-        current_user=Depends(get_current_user),
-    ):
-
-        if current_user.role not in [
-            role.value for role in allowed_roles
-        ]:
-
+    def role_checker(current_user=Depends(get_current_user)):
+        if current_user.role not in allowed_roles:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
-                detail="Insufficient permissions.",
+                detail="Insufficient permissions",
             )
 
         return current_user
 
-    return dependency
+    return role_checker
+
+
+def require_admin():
+    """
+    Convenience dependency for admin-only endpoints.
+    """
+
+    return require_roles("ADMIN")
