@@ -1,11 +1,11 @@
 from enum import Enum
 import uuid
 
+from sqlalchemy.orm import relationship  # type: ignore[import-not-found]
 from sqlalchemy import Boolean, Column, String  # type: ignore[import-not-found]
 from sqlalchemy.dialects.postgresql import UUID  # type: ignore[import-not-found]
 
-from app.db.base import Base
-
+from app.db.session import Base
 
 class UserRole(str, Enum):
     ADMIN = "ADMIN"
@@ -49,4 +49,10 @@ class User(Base):
         String(20),
         default=UserRole.USER.value,
         nullable=False
+    )
+
+    sessions = relationship(
+        "Session",
+        back_populates="user",
+        cascade="all, delete-orphan",
     )
