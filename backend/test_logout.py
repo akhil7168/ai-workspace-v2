@@ -4,13 +4,13 @@ from app.services.session_service import SessionService
 
 db = SessionLocal()
 
-email = "session_test@example.com"
+email = "logout_test@example.com"
 
 user = db.query(User).filter(User.email == email).first()
 
 if not user:
     user = User(
-        full_name="Session Test User",
+        full_name="Logout User",
         email=email,
         password_hash="dummy_hash",
     )
@@ -21,13 +21,15 @@ if not user:
 service = SessionService(db)
 
 session = service.create_session(
-    user_id=user.id,
-    user_agent="Chrome Test",
-    ip_address="127.0.0.1",
+    user.id,
+    "Chrome",
+    "127.0.0.1",
 )
 
-print("Session Created Successfully")
-print("Session ID:", session.id)
-print("Refresh Token:", session.refresh_token[:25], "...")
+service.logout(session.refresh_token)
+
+session = service.repo.get_by_refresh_token(session.refresh_token)
+
+print("Revoked:", session.is_revoked)
 
 db.close()

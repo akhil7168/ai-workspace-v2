@@ -1,47 +1,42 @@
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
+
+from typing import Any
 
 from app.models.session import Session as UserSession
 from app.repositories.session_repository import SessionRepository
-from app.core.security import (
-    create_access_token,
-    create_refresh_token,
-    refresh_token_expiry,
-)
+from app.core.security import create_refresh_token
+from app.core.config import settings
+
 
 class SessionService:
 
-    def __init__(self, db):
+    def __init__(self, db: Any):
         self.repo = SessionRepository(db)
 
-    # --------------------------------
-    # Create new session
-    # --------------------------------
     def create_session(
         self,
         user_id,
-        user_agent=None,
-        ip_address=None,
+        user_agent: str,
+        ip_address: str,
     ):
-        refresh = create_refresh_token()
+        refresh_token = create_refresh_token()
+
+        expires_at = datetime.now(timezone.utc) + timedelta(
+            days=settings.REFRESH_TOKEN_EXPIRE_DAYS
+        )
 
         session = UserSession(
             user_id=user_id,
-            refresh_token=refresh,
-            expires_at=refresh_token_expiry(),
+            refresh_token=refresh_token,
             user_agent=user_agent,
             ip_address=ip_address,
+            expires_at=expires_at,
         )
 
-        self.repo.create(session)
+        return self.repo.create(session)
 
-        return session
-
-    # --------------------------------
-    # Validate refresh token
-    # --------------------------------
-    def validate_refresh_token(self, refresh_token):
-
-        session = self.repo.get_by_token(refresh_token)
+    def rotate_refresh_token(self, old_token: str):
+        session = self.repo.get_by_refresh_token(old_token)
 
         if not session:
             return None
@@ -49,67 +44,22 @@ class SessionService:
         if session.is_revoked:
             return None
 
-        if session.expires_at < datetime.now(timezone.utc):
-            return None
+        self.repo.revoke(session)
 
-        return session
+        return self.create_session(
+            session.user_id,
+            session.user_agent,
+            session.ip_address,
+        )
 
-    # --------------------------------
-    # Revoke session
-    # --------------------------------
-    def revoke_session(self, refresh_token):
-        session = self.repo.get_by_token(refresh_token)
+    def logout(self, refresh_token: str):
+        session = self.repo.get_by_refresh_token(refresh_token)
 
         if session:
             self.repo.revoke(session)
 
-    # --------------------------------
-    # Revoke all sessions
-    # --------------------------------
-    def revoke_all_sessions(self, user_id):
-        self.repo.revoke_all(user_id)
+        return True
 
-    # --------------------------------
-    # Rotate Refresh Token
-    # --------------------------------
-    def rotate_refresh_token(self, refresh_token):
-
-        session = self.validate_refresh_token(refresh_token)
-
-        if session is None:
-            return None
-
-        session.is_revoked = True
-        self.repo.update(session)
-
-        return self.create_session(
-            user_id=session.user_id,
-            user_agent=session.user_agent,
-            ip_address=session.ip_address,
-        )
-
-    def refresh_access_token(self, refresh_token: str):
-
-        new_session = self.rotate_refresh_token(refresh_token)
-
-        if new_session is None:
-            return None
-
-        access_token = create_access_token(str(new_session.user_id))
-
-        return {
-            "access_token": access_token,
-            "refresh_token": new_session.refresh_token,
-            "token_type": "bearer",
-        }
-
-    def logout(self, refresh_token: str):
-
-        session = self.validate_refresh_token(refresh_token)
-
-        if session is None:
-            return False
-
-        self.repo.revoke(session)
-
+    def logout_all(self, user_id):
+        self.repo.revoke_all_user_sessions(user_id)
         return True

@@ -1,43 +1,53 @@
-import uuid
+from uuid import uuid4
+from sqlalchemy import Column, String, Boolean, DateTime, Text, UUID  # type: ignore[import-not-found]
+from sqlalchemy.orm import relationship  # type: ignore[import-not-found]
 from datetime import datetime, timezone
-from typing import TYPE_CHECKING
-
-from sqlalchemy import Boolean, DateTime, String, UUID  # pyright: ignore[reportMissingImports]
-from sqlalchemy.orm import Mapped, mapped_column, relationship  # pyright: ignore[reportMissingImports]
 
 from app.db.session import Base
+from enum import Enum
 
-if TYPE_CHECKING:
-    from app.models.session import Session
-
+class UserRole(str, Enum):
+    USER = "user"
+    ADMIN = "admin"
 
 class User(Base):
     __tablename__ = "users"
 
-    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid4)
 
-    full_name: Mapped[str] = mapped_column(String(150), nullable=False)
+    full_name = Column(String(120), nullable=False)
 
-    email: Mapped[str] = mapped_column(String(255), unique=True, index=True, nullable=False)
+    email = Column(String(255), unique=True, nullable=False, index=True)
 
-    password_hash: Mapped[str] = mapped_column(String(255), nullable=False)
+    password_hash = Column(String(255), nullable=False)
 
-    role: Mapped[str] = mapped_column(String(30), default="user")
+    role = Column(
+    String(30),
+    default=UserRole.USER.value,
+    nullable=False,
+    )
 
-    is_active: Mapped[bool] = mapped_column(Boolean, default=True)
+    is_active = Column(Boolean, default=True)
 
-    is_verified: Mapped[bool] = mapped_column(Boolean, default=False)
+    is_verified = Column(Boolean, default=False)
 
-    bio: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    bio = Column(Text, nullable=True)
 
-    avatar_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    avatar_url = Column(String(500), nullable=True)
 
-    sessions: Mapped[list["Session"]] = relationship(
+    created_at = Column(
+        DateTime(timezone=True),
+        default=lambda: datetime.now(timezone.utc),
+    )
+
+    updated_at = Column(
+        DateTime(timezone=True),
+        default=lambda: datetime.now(timezone.utc),
+        onupdate=lambda: datetime.now(timezone.utc),
+    )
+
+    sessions = relationship(
         "Session",
         back_populates="user",
         cascade="all, delete-orphan",
     )
-
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
-
-    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))

@@ -39,50 +39,30 @@ def verify_password(
 # JWT Utilities
 # ----------------------------
 
-def create_access_token(
-    subject: str,
-    expires_delta: timedelta | None = None,
-) -> str:
-
-    expire = datetime.now(timezone.utc) + (
-        expires_delta
-        or timedelta(
-            minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES
-        )
+def create_access_token(subject: str):
+    expire = datetime.now(timezone.utc) + timedelta(
+        minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES
     )
 
     payload = {
         "sub": subject,
-        "type": "access",
         "exp": expire,
+        "type": "access",
     }
 
-    return jwt.encode(
-        payload,
-        settings.SECRET_KEY,
-        algorithm=settings.ALGORITHM,
-    )
+    return jwt.encode(payload, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
 
 
-def create_refresh_token() -> str:
-    """
-    Generates a secure random refresh token.
-    This token is stored in PostgreSQL instead of encoding user data.
-    """
+def create_refresh_token(subject: str | None = None):
     return secrets.token_urlsafe(64)
 
 
-def decode_token(token: str) -> dict[str, Any]:
-
-    try:
-        return jwt.decode(
-            token,
-            settings.SECRET_KEY,
-            algorithms=[settings.ALGORITHM],
-        )
-
-    except JWTError:
-        return {}
+def decode_token(token: str):
+    return jwt.decode(
+        token,
+        settings.SECRET_KEY,
+        algorithms=[settings.ALGORITHM],
+    )
     
 def refresh_token_expiry():
     """
