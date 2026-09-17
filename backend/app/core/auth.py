@@ -1,4 +1,4 @@
-from fastapi import Depends, HTTPException, status  # type: ignore[import-not-found]
+from fastapi import Depends, HTTPException, status, Request  # type: ignore[import-not-found]
 from fastapi.security import OAuth2PasswordBearer  # type: ignore[import-not-found]
 from typing import Any
 

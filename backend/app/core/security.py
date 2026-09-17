@@ -1,3 +1,4 @@
+import secrets
 from datetime import datetime, timedelta, timezone
 from typing import Any
 
@@ -63,25 +64,12 @@ def create_access_token(
     )
 
 
-def create_refresh_token(
-    subject: str,
-) -> str:
-
-    expire = datetime.now(timezone.utc) + timedelta(
-        days=settings.REFRESH_TOKEN_EXPIRE_DAYS
-    )
-
-    payload = {
-        "sub": subject,
-        "type": "refresh",
-        "exp": expire,
-    }
-
-    return jwt.encode(
-        payload,
-        settings.SECRET_KEY,
-        algorithm=settings.ALGORITHM,
-    )
+def create_refresh_token() -> str:
+    """
+    Generates a secure random refresh token.
+    This token is stored in PostgreSQL instead of encoding user data.
+    """
+    return secrets.token_urlsafe(64)
 
 
 def decode_token(token: str) -> dict[str, Any]:
@@ -95,3 +83,11 @@ def decode_token(token: str) -> dict[str, Any]:
 
     except JWTError:
         return {}
+    
+def refresh_token_expiry():
+    """
+    Returns expiry timestamp for refresh token.
+    """
+    return datetime.now(timezone.utc) + timedelta(
+        days=settings.REFRESH_TOKEN_EXPIRE_DAYS
+    )
