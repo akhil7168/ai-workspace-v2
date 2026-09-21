@@ -3,32 +3,19 @@ from app.models.user import User
 from app.services.session_service import SessionService
 
 db = SessionLocal()
-
-email = "rotation_test@example.com"
-
-user = db.query(User).filter(User.email == email).first()
-
-if not user:
-    user = User(
-        full_name="Rotation User",
-        email=email,
-        password_hash="dummy_hash",
-    )
-    db.add(user)
-    db.commit()
-    db.refresh(user)
-
 service = SessionService(db)
 
-session = service.create_session(
+user = db.query(User).filter(User.email == "akhil@example.com").first()
+
+session, token = service.create_session(
     user_id=user.id,
     user_agent="Chrome",
     ip_address="127.0.0.1",
 )
 
-new_session = service.rotate_refresh_token(session.refresh_token)
+print("Old Token:", token[:25])
 
-print("Old revoked:", service.repo.get_by_refresh_token(session.refresh_token).is_revoked)
-print("New Token:", new_session.refresh_token[:25], "...")
+new_session, new_token = service.rotate_refresh_token(token)
 
-db.close()
+print("Old Revoked:", service.repo.get_by_refresh_token(token).is_revoked)
+print("New Token:", new_token[:25])

@@ -1,4 +1,5 @@
 from uuid import uuid4
+import uuid
 from sqlalchemy import Column, String, Boolean, DateTime, Text, UUID  # type: ignore[import-not-found]
 from sqlalchemy.orm import relationship  # type: ignore[import-not-found]
 from datetime import datetime, timezone
@@ -13,27 +14,21 @@ class UserRole(str, Enum):
 class User(Base):
     __tablename__ = "users"
 
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid4)
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
 
-    full_name = Column(String(120), nullable=False)
+    full_name = Column(String(100), nullable=False)
 
-    email = Column(String(255), unique=True, nullable=False, index=True)
+    email = Column(String(255), unique=True, nullable=False)
 
     password_hash = Column(String(255), nullable=False)
 
-    role = Column(
-    String(30),
-    default=UserRole.USER.value,
-    nullable=False,
-    )
+    role = Column(String(30), default=UserRole.USER.value, nullable=False)
 
     is_active = Column(Boolean, default=True)
-
     is_verified = Column(Boolean, default=False)
 
     bio = Column(Text, nullable=True)
-
-    avatar_url = Column(String(500), nullable=True)
+    avatar_url = Column(String(255), nullable=True)
 
     created_at = Column(
         DateTime(timezone=True),

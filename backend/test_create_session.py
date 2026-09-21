@@ -3,31 +3,22 @@ from app.models.user import User
 from app.services.session_service import SessionService
 
 db = SessionLocal()
+service = SessionService(db)
 
-email = "session_test@example.com"
+email = "akhil@example.com"
 
 user = db.query(User).filter(User.email == email).first()
 
 if not user:
-    user = User(
-        full_name="Session Test User",
-        email=email,
-        password_hash="dummy_hash",
+    print("Register akhil@example.com first.")
+else:
+    session, token = service.create_session(
+        user_id=user.id,
+        user_agent="Chrome Test",
+        ip_address="127.0.0.1",
     )
-    db.add(user)
-    db.commit()
-    db.refresh(user)
 
-service = SessionService(db)
-
-session = service.create_session(
-    user_id=user.id,
-    user_agent="Chrome Test",
-    ip_address="127.0.0.1",
-)
-
-print("Session Created Successfully")
-print("Session ID:", session.id)
-print("Refresh Token:", session.refresh_token[:25], "...")
-
-db.close()
+    print("Session Created")
+    print("Session ID:", session.id)
+    print("User ID:", session.user_id)
+    print("Refresh Token:", token[:30], "...")

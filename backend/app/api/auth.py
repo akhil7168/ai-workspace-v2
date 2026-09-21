@@ -7,6 +7,7 @@ from app.schemas.user import UserCreate, UserLogin,RefreshTokenRequest,RefreshTo
 from app.schemas.auth import RefreshTokenRequest, TokenResponse
 from app.services.auth_service import AuthService
 from app.services.session_service import SessionService
+from app.core.security import create_access_token
 
 from fastapi import Request  # type: ignore[import-not-found]
 
@@ -29,6 +30,7 @@ def register(
     "/login",
     response_model=TokenResponse,
 )
+@router.post("/login", response_model=TokenResponse)
 def login(
     request: Request,
     form_data: OAuth2PasswordRequestForm = Depends(),
@@ -39,41 +41,44 @@ def login(
         password=form_data.password,
     )
 
+    user_agent = request.headers.get("user-agent", "")
+    ip_address = request.client.host if request.client else ""
+
     return AuthService(db).login(
         payload,
-        user_agent=request.headers.get("User-Agent"),
-        ip_address=request.client.host,
+        user_agent=user_agent,
+        ip_address=ip_address,
     )
 
-@router.post(
-    "/refresh",
-    response_model=TokenResponse
-)
-def refresh(
+@router.post("/refresh", response_model=TokenResponse)
+def refresh_token(
     payload: RefreshTokenRequest,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
-    return AuthService(db).refresh_access_token(
-        payload.refresh_token
-    )
+    result = SessionService(db).rotate_refresh_token(payload.refresh_token)
 
+    if result is None:
+        raise HTTPException(status_code=401, detail="Invalid refresh token")
+
+    session, new_refresh_token = result
+
+    access_token = create_access_token(str(session.user_id))
+
+    return {
+        "access_token": access_token,
+        "refresh_token": new_refresh_token,
+        "token_type": "bearer",
+    }
 
 @router.post("/logout")
 def logout(
-    payload: LogoutRequest,
+    payload: RefreshTokenRequest,
     db: Session = Depends(get_db),
 ):
-    success = SessionService(db).logout(
-        payload.refresh_token
-    )
+    success = SessionService(db).revoke_session(payload.refresh_token)
 
     if not success:
-        raise HTTPException(
-            status_code=401,
-            detail="Session already expired",
-        )
+        raise HTTPException(status_code=404, detail="Session not found")
 
-    return {
-        "message": "Logged out successfully"
-    }
+    return {"message": "Logged out successfully"}
 
