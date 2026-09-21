@@ -1,10 +1,11 @@
 # FastAPI is provided by the backend environment.
 # pyright: reportMissingImports=false
 from fastapi import APIRouter, Depends
+from sqlalchemy.orm import Session
 from typing import Any
 
 from app.core.auth import (
-    get_current_user,
+    get_current_active_user,
     require_roles,
 )
 from app.db.session import get_db
@@ -14,7 +15,7 @@ from app.schemas.user import (
     PasswordUpdate,
 )
 from app.services.user_service import UserService
-from app.models.user import UserRole
+from app.models.user import User, UserRole
 
 router = APIRouter(
     prefix="/users",
@@ -31,7 +32,7 @@ router = APIRouter(
     response_model=UserResponse,
 )
 def get_me(
-    current_user=Depends(get_current_user),
+    current_user=Depends(get_current_active_user),
 ):
     return current_user
 
@@ -45,7 +46,7 @@ def get_me(
     response_model=UserResponse,
 )
 def get_profile(
-    current_user=Depends(get_current_user),
+    current_user=Depends(get_current_active_user),
 ):
     return current_user
 
@@ -61,7 +62,7 @@ def get_profile(
 def update_profile(
     payload: UserProfileUpdate,
     db: Any = Depends(get_db),
-    current_user=Depends(get_current_user),
+    current_user=Depends(get_current_active_user),
 ):
     service = UserService(db)
 
@@ -79,7 +80,7 @@ def update_profile(
 def update_password(
     payload: PasswordUpdate,
     db: Any = Depends(get_db),
-    current_user=Depends(get_current_user),
+    current_user=Depends(get_current_active_user),
 ):
     service = UserService(db)
 
@@ -102,3 +103,10 @@ def admin_route(
         "message": "Welcome Admin!",
         "email": current_user.email,
     }
+
+@router.get("/all")
+def get_all_users(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_roles("admin")),
+):
+    return UserService(db).get_all_users()
