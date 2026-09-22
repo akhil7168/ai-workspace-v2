@@ -1,3 +1,5 @@
+from requests import session
+
 from app.schemas import user
 from fastapi import HTTPException, status  # type: ignore[import-not-found]
 from typing import Any
@@ -50,11 +52,13 @@ class AuthService:
 
         access_token = create_access_token(str(user.id))
 
-        _, refresh_token = SessionService(self.db).create_session(
+        session = SessionService(self.db).create_session(
             user_id=user.id,
             user_agent=user_agent,
             ip_address=ip_address,
         )
+
+        refresh_token = session.refresh_token
 
         return {
         "access_token": access_token,

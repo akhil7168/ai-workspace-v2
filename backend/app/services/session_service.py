@@ -1,29 +1,26 @@
 from datetime import datetime, timedelta, timezone
+from uuid import UUID
 
-from app.models.session import Session
+from app.models.session import UserSession
 from app.repositories.session_repository import SessionRepository
 from app.core.security import create_refresh_token
 
-
 class SessionService:
+
     def __init__(self, db):
         self.db = db
         self.repo = SessionRepository(db)
 
     def create_session(
         self,
-        user_id,
-        user_agent: str = "",
-        ip_address: str = "",
-    ):
-        """
-        Creates a DB session and generates a refresh token.
-        Returns (session, refresh_token)
-        """
+        user_id: UUID,
+        user_agent: str,
+        ip_address: str,
+    ) -> UserSession:
 
-        refresh_token = create_refresh_token(str(user_id))
+        refresh_token = create_refresh_token(subject=str(user_id))
 
-        session = Session(
+        session = UserSession(
             user_id=user_id,
             refresh_token=refresh_token,
             user_agent=user_agent,
@@ -33,11 +30,10 @@ class SessionService:
         )
 
         self.repo.create(session)
+        return session
 
-        return session, refresh_token
-
-    def rotate_refresh_token(self, old_token: str):
-        session = self.repo.get_by_refresh_token(old_token)
+    def validate_refresh_token(self, refresh_token: str):
+        session = self.repo.get_by_refresh_token(refresh_token)
 
         if not session:
             return None
@@ -48,24 +44,27 @@ class SessionService:
         if session.expires_at < datetime.now(timezone.utc):
             return None
 
-        session.is_revoked = True
-        self.repo.update(session)
+        return session
 
-        new_session, new_token = self.create_session(
-            user_id=session.user_id,
-            user_agent=session.user_agent,
-            ip_address=session.ip_address,
-        )
+    def rotate_refresh_token(self, old_token: str):
 
-        return new_session, new_token
-
-    def revoke_session(self, refresh_token: str):
-        session = self.repo.get_by_refresh_token(refresh_token)
+        session = self.validate_refresh_token(old_token)
 
         if not session:
-            return False
+            return None
 
-        session.is_revoked = True
-        self.repo.update(session)
+        new_token = create_refresh_token(subject=str(session.user_id))
 
-        return True
+        self.repo.update_refresh_token(session, new_token)
+
+        return new_token
+
+    def revoke_session(self, refresh_token: str):
+
+        session = self.repo.get_by_refresh_token(refresh_token)
+
+        if session:
+            self.repo.revoke(session)
+
+    def revoke_all_sessions(self, user_id: UUID):
+        self.repo.revoke_all_user_sessions(user_id)

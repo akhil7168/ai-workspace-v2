@@ -1,28 +1,29 @@
-from uuid import uuid4
-from datetime import datetime, timezone
+import uuid
 
-from sqlalchemy import Column, String, Boolean, DateTime, ForeignKey, UUID  # pyright: ignore[reportMissingImports]
+from sqlalchemy import Column, String, Boolean, DateTime, ForeignKey, Uuid, func  # pyright: ignore[reportMissingImports]
 from sqlalchemy.orm import relationship  # pyright: ignore[reportMissingImports]
+from app.db.base_class import Base
 
-from app.db.session import Base
-
-
-class Session(Base):
+class UserSession(Base):
     __tablename__ = "user_sessions"
 
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid4)
+    id = Column(
+        Uuid(as_uuid=True),
+        primary_key=True,
+        default=uuid.uuid4,
+    )
 
     user_id = Column(
-        UUID(as_uuid=True),
+        Uuid(as_uuid=True),
         ForeignKey("users.id", ondelete="CASCADE"),
         nullable=False,
     )
 
-    refresh_token = Column(String(255), unique=True, nullable=False)
+    refresh_token = Column(String, nullable=False, unique=True)
 
-    user_agent = Column(String(255))
+    user_agent = Column(String, nullable=True)
 
-    ip_address = Column(String(50))
+    ip_address = Column(String, nullable=True)
 
     expires_at = Column(DateTime(timezone=True), nullable=False)
 
@@ -30,13 +31,17 @@ class Session(Base):
 
     created_at = Column(
         DateTime(timezone=True),
-        default=lambda: datetime.now(timezone.utc),
+        server_default=func.now(),
     )
 
     updated_at = Column(
         DateTime(timezone=True),
-        default=lambda: datetime.now(timezone.utc),
-        onupdate=lambda: datetime.now(timezone.utc),
+        server_default=func.now(),
+        onupdate=func.now(),
     )
 
-    user = relationship("User", back_populates="sessions")
+    # Relationship to User
+    user = relationship(
+        "User",
+        back_populates="sessions",
+    )

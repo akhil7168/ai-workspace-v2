@@ -4,8 +4,9 @@ from sqlalchemy import Column, String, Boolean, DateTime, Text, UUID  # type: ig
 from sqlalchemy.orm import relationship  # type: ignore[import-not-found]
 from datetime import datetime, timezone
 
-from app.db.session import Base
+from app.db.base_class import Base
 from enum import Enum
+
 
 class UserRole(str, Enum):
     USER = "user"
@@ -42,13 +43,19 @@ class User(Base):
     )
 
     sessions = relationship(
-        "Session",
+        "UserSession",
         back_populates="user",
         cascade="all, delete-orphan",
     )
 
     workspaces = relationship(
-    "Workspace",
-    back_populates="owner",
-    cascade="all, delete-orphan",
+        "Workspace",
+        back_populates="owner",
+        cascade="all, delete-orphan",
+    )
+
+    projects = relationship(
+        "Project",
+        back_populates="creator",
+        cascade="all, delete-orphan",
     )

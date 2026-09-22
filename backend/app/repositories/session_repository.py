@@ -1,7 +1,6 @@
 from typing import Any
 
-from app.models.session import Session as UserSession
-
+from app.models.session import UserSession
 
 class SessionRepository:
 

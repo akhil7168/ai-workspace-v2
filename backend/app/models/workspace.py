@@ -11,8 +11,7 @@ from sqlalchemy import (  # pyright: ignore[reportMissingImports]
 from sqlalchemy.dialects.postgresql import UUID  # pyright: ignore[reportMissingImports]
 from sqlalchemy.orm import relationship  # pyright: ignore[reportMissingImports]
 
-from app.db.session import Base
-
+from app.db.base_class import Base
 
 class Workspace(Base):
     __tablename__ = "workspaces"
@@ -68,4 +67,10 @@ class Workspace(Base):
     owner = relationship(
         "User",
         back_populates="workspaces",
+    )
+
+    projects = relationship(
+        "Project",
+        back_populates="workspace",
+        cascade="all, delete-orphan",
     )
