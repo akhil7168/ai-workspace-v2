@@ -1,26 +1,20 @@
 from uuid import UUID
-
 from typing import Any
 
-from app.models.project import Project
+from app.models.project import Project, ProjectStatus
 
 
 class ProjectRepository:
+
     def __init__(self, db: Any):
         self.db = db
 
-    # -----------------------------
-    # Create
-    # -----------------------------
     def create(self, project: Project):
         self.db.add(project)
         self.db.commit()
         self.db.refresh(project)
         return project
 
-    # -----------------------------
-    # Read
-    # -----------------------------
     def get_by_id(self, project_id: UUID):
         return (
             self.db.query(Project)
@@ -36,17 +30,11 @@ class ProjectRepository:
             .all()
         )
 
-    # -----------------------------
-    # Update
-    # -----------------------------
     def update(self, project: Project):
         self.db.commit()
         self.db.refresh(project)
         return project
 
-    # -----------------------------
-    # Delete
-    # -----------------------------
     def delete(self, project: Project):
         self.db.delete(project)
         self.db.commit()

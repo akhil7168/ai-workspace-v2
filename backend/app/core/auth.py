@@ -15,7 +15,7 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login")
 # -----------------------------
 # Authentication
 # -----------------------------
-def get_current_active_user(
+def get_current_user(
     token: str = Depends(oauth2_scheme),
     db: Session = Depends(get_db),
 ):
@@ -56,7 +56,7 @@ def get_current_active_user(
 # Active user dependency
 # -----------------------------
 def get_current_active_user(
-    current_user: User = Depends(get_current_active_user),
+    current_user: User = Depends(get_current_user),
 ):
     if not current_user.is_active:
         raise HTTPException(

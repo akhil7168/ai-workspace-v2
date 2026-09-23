@@ -1,4 +1,5 @@
-from requests import session
+from ipaddress import ip_address
+
 
 from app.schemas import user
 from fastapi import HTTPException, status  # type: ignore[import-not-found]
@@ -41,27 +42,33 @@ class AuthService:
 
         return self.user_repo.create(user)
 
-    def login(self, payload, user_agent="", ip_address=""):
-        user = self.db.query(User).filter(User.email == payload.email).first()
+    def login(self, payload: UserLogin, user_agent: str, ip_address: str):
+        user = self.user_repo.get_by_email(payload.email)
 
         if not user:
-            raise HTTPException(status_code=401, detail="Invalid credentials")
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid credentials"
+            )
 
         if not verify_password(payload.password, user.password_hash):
-            raise HTTPException(status_code=401, detail="Invalid credentials")
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid credentials"
+            )
 
-        access_token = create_access_token(str(user.id))
+        access_token = create_access_token(subject=str(user.id))
+        refresh_token = create_refresh_token(subject=str(user.id))
 
-        session = SessionService(self.db).create_session(
+        SessionService(self.db).create_session(
             user_id=user.id,
+            refresh_token=refresh_token,
             user_agent=user_agent,
             ip_address=ip_address,
         )
 
-        refresh_token = session.refresh_token
-
         return {
-        "access_token": access_token,
-        "refresh_token": refresh_token,
-        "token_type": "bearer",
-    }
+            "access_token": access_token,
+            "refresh_token": refresh_token,
+            "token_type": "bearer",
+        }
