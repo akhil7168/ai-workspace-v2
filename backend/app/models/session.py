@@ -3,6 +3,10 @@ import uuid
 from sqlalchemy import Column, String, Boolean, DateTime, ForeignKey, Uuid, func  # pyright: ignore[reportMissingImports]
 from sqlalchemy.orm import relationship  # pyright: ignore[reportMissingImports]
 from app.db.base_class import Base
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from app.models.user import User
 
 class UserSession(Base):
     __tablename__ = "user_sessions"

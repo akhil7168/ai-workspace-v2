@@ -1,12 +1,16 @@
 from uuid import uuid4
 import enum
 
-from sqlalchemy import Column, String, Text, DateTime, ForeignKey, Enum
-from sqlalchemy.dialects.postgresql import UUID
-from sqlalchemy.orm import relationship
-from sqlalchemy.sql import func
+from sqlalchemy import Column, String, Text, DateTime, ForeignKey, Enum, Uuid  # pyright: ignore[reportMissingImports]
+from sqlalchemy.orm import relationship  # pyright: ignore[reportMissingImports]
+from sqlalchemy import func  # pyright: ignore[reportMissingImports]
 
 from app.db.base_class import Base
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from app.models.user import User
+    from app.models.workspace import Workspace
 
 
 class ProjectStatus(str, enum.Enum):
@@ -19,7 +23,7 @@ class Project(Base):
 
     # PRIMARY KEY
     id = Column(
-        UUID(as_uuid=True),
+        Uuid(as_uuid=True),
         primary_key=True,
         default=uuid4,
         nullable=False
@@ -36,13 +40,13 @@ class Project(Base):
     )
 
     workspace_id = Column(
-        UUID(as_uuid=True),
+        Uuid(as_uuid=True),
         ForeignKey("workspaces.id", ondelete="CASCADE"),
         nullable=False
     )
 
     created_by = Column(
-        UUID(as_uuid=True),
+        Uuid(as_uuid=True),
         ForeignKey("users.id"),
         nullable=False
     )
@@ -63,7 +67,7 @@ class Project(Base):
         back_populates="projects"
     )
 
-    creator = relationship(
+    owner = relationship(
         "User",
         back_populates="projects"
     )

@@ -1,12 +1,21 @@
-from uuid import uuid4
+from __future__ import annotations
+
 import uuid
-from sqlalchemy import Column, String, Boolean, DateTime, Text, UUID  # type: ignore[import-not-found]
-from sqlalchemy.orm import relationship  # type: ignore[import-not-found]
 from datetime import datetime, timezone
+from enum import Enum
+from typing import TYPE_CHECKING
+
+from sqlalchemy import Boolean, Column, DateTime, String, Text  # pyright: ignore[reportMissingImports]
+from sqlalchemy.dialects.postgresql import UUID  # pyright: ignore[reportMissingImports]
+from sqlalchemy.orm import Mapped, relationship  # pyright: ignore[reportMissingImports]
 
 from app.db.base_class import Base
-from enum import Enum
 
+if TYPE_CHECKING:
+    from app.models.workspace import Workspace
+    from app.models.project import Project
+    from app.models.workspace_member import WorkspaceMember
+    from app.models.session import UserSession
 
 class UserRole(str, Enum):
     USER = "user"
@@ -42,20 +51,25 @@ class User(Base):
         onupdate=lambda: datetime.now(timezone.utc),
     )
 
-    sessions = relationship(
-        "UserSession",
-        back_populates="user",
-        cascade="all, delete-orphan",
-    )
-
-    workspaces = relationship(
+    owned_workspaces: Mapped[list["Workspace"]] = relationship(
         "Workspace",
         back_populates="owner",
-        cascade="all, delete-orphan",
+        foreign_keys="Workspace.owner_id",
     )
 
-    projects = relationship(
+    workspace_memberships: Mapped[list["WorkspaceMember"]] = relationship(
+        "WorkspaceMember",
+        back_populates="user",
+        foreign_keys="WorkspaceMember.user_id",
+    )
+
+    projects: Mapped[list["Project"]] = relationship(
         "Project",
-        back_populates="creator",
+        back_populates="owner",
+    )
+
+    sessions: Mapped[list["UserSession"]] = relationship(
+        "UserSession",
+        back_populates="user",
         cascade="all, delete-orphan",
     )

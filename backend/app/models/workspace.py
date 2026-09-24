@@ -1,17 +1,18 @@
+from __future__ import annotations
+
 import uuid
 from datetime import datetime, timezone
+from typing import TYPE_CHECKING
 
-from sqlalchemy import (  # pyright: ignore[reportMissingImports]
-    Column,
-    String,
-    Boolean,
-    DateTime,
-    ForeignKey,
-)
-from sqlalchemy.dialects.postgresql import UUID  # pyright: ignore[reportMissingImports]
-from sqlalchemy.orm import relationship  # pyright: ignore[reportMissingImports]
+from sqlalchemy import Boolean, Column, DateTime, ForeignKey, String, UUID  # type: ignore[reportMissingImports]
+from sqlalchemy.orm import Mapped, relationship  # type: ignore[reportMissingImports]
 
 from app.db.base_class import Base
+
+if TYPE_CHECKING:
+    from app.models.user import User
+    from app.models.project import Project
+    from app.models.workspace_member import WorkspaceMember
 
 class Workspace(Base):
     __tablename__ = "workspaces"
@@ -64,9 +65,16 @@ class Workspace(Base):
         onupdate=lambda: datetime.now(timezone.utc),
     )
 
-    owner = relationship(
+    owner: Mapped["User"] = relationship(
         "User",
-        back_populates="workspaces",
+        back_populates="owned_workspaces",
+        foreign_keys=[owner_id],
+    )
+
+    members: Mapped[list["WorkspaceMember"]] = relationship(
+        "WorkspaceMember",
+        back_populates="workspace",
+        cascade="all, delete-orphan",
     )
 
     projects = relationship(
