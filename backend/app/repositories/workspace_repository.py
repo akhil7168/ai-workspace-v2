@@ -9,7 +9,7 @@ class WorkspaceRepository:
     def __init__(self, db: Any):
         self.db = db
 
-    def create(self, workspace: Workspace):
+    def create(self, workspace):
         self.db.add(workspace)
         self.db.commit()
         self.db.refresh(workspace)

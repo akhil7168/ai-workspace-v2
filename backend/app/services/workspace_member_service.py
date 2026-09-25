@@ -35,33 +35,29 @@ class WorkspaceMemberService:
         self,
         workspace_id,
         user_id,
-        invited_by,
-        role: WorkspaceRole,
-    ):
+        role,
+        ):
 
-        workspace = self.workspace_repo.get_workspace(workspace_id)
-
-        if not workspace:
-            raise HTTPException(404, "Workspace not found")
-
-        user = self.user_repo.get_user_by_id(user_id)
-
-        if not user:
-            raise HTTPException(404, "User not found")
-
-        existing = self.member_repo.get_membership(workspace_id, user_id)
-
-        if existing:
-            raise HTTPException(400, "User already belongs to workspace")
-
-        member = WorkspaceMember(
+        return self.member_repo.create_member(
             workspace_id=workspace_id,
             user_id=user_id,
-            invited_by=invited_by,
             role=role,
         )
 
-        return self.member_repo.add_member(member)
+    def get_membership(
+        self,
+        workspace_id,
+        user_id,
+    ):
+        return self.member_repo.get_membership(
+            workspace_id=workspace_id,
+            user_id=user_id,
+        )
+
+    def get_user_memberships(self, user_id):
+        return self.member_repo.get_user_workspaces(user_id)
+
+    
 
     def list_members(self, workspace_id):
 
@@ -72,19 +68,20 @@ class WorkspaceMemberService:
 
         return self.member_repo.get_workspace_members(workspace_id)
 
-    def remove_member(self, workspace_id, user_id):
+    def remove_member(
+        self,
+        workspace_id,
+        user_id,
+    ):
+        membership = self.member_repo.get_membership(
+            workspace_id=workspace_id,
+            user_id=user_id,
+        )
 
-        member = self.member_repo.get_membership(workspace_id, user_id)
+        if membership:
+            self.member_repo.delete_member(membership)
 
-        if not member:
-            raise HTTPException(404, "Member not found")
-
-        if member.role == WorkspaceRole.OWNER:
-            raise HTTPException(400, "Owner cannot be removed")
-
-        self.member_repo.remove_member(member)
-
-        return {"message": "Member removed successfully"}
+        return {"message": "Member removed"}
 
     def update_role(
         self,

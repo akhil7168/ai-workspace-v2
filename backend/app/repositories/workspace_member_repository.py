@@ -1,3 +1,4 @@
+from enum import member
 from typing import Any
 
 from app.models.workspace_member import WorkspaceMember, WorkspaceRole
@@ -9,6 +10,19 @@ class WorkspaceMemberRepository:
         self.db = db
 
     def add_member(self, member: WorkspaceMember):
+
+        self.db.add(member)
+        self.db.commit()
+        self.db.refresh(member)
+
+        return member
+
+    def create_member(self, workspace_id, user_id, role):
+        member = WorkspaceMember(
+            workspace_id=workspace_id,
+            user_id=user_id,
+            role=role,
+        )
 
         self.db.add(member)
         self.db.commit()
@@ -56,7 +70,7 @@ class WorkspaceMemberRepository:
 
         return member
 
-    def remove_member(self, member):
+    def delete_member(self, member):
 
         self.db.delete(member)
         self.db.commit()

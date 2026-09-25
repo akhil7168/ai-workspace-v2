@@ -1,9 +1,15 @@
 from uuid import UUID
-from typing import Any
+from typing import Any, TYPE_CHECKING, TypeAlias
 
 # Keep service type annotations usable when SQLAlchemy is not available to the
 # editor/runtime environment.
-Session = Any
+if TYPE_CHECKING:
+    from sqlalchemy.orm import Session as SQLAlchemySession  # type: ignore[reportMissingImports]
+
+    DatabaseSession: TypeAlias = SQLAlchemySession
+else:
+    DatabaseSession: TypeAlias = Any
+
 try:
     from fastapi import HTTPException  # type: ignore[reportMissingImports]
 except ImportError:
@@ -12,16 +18,28 @@ except ImportError:
             self.status_code = status_code
             self.detail = detail
             super().__init__(detail)
-
 from app.models.workspace import Workspace
+from app.models.workspace_member import WorkspaceRole
+
 from app.repositories.workspace_repository import WorkspaceRepository
+from app.repositories.user_repository import UserRepository
+from app.repositories.workspace_member_repository import WorkspaceMemberRepository
+
+from app.services.workspace_member_service import WorkspaceMemberService
+
 from app.schemas.workspace import WorkspaceCreate, WorkspaceUpdate
 
 
 class WorkspaceService:
-    def __init__(self, db: Session):
+
+    def __init__(self, db: DatabaseSession):
         self.db = db
-        self.repo = WorkspaceRepository(db)
+
+        self.workspace_repository = WorkspaceRepository(db)
+        self.user_repository = UserRepository(db)
+        self.member_repository = WorkspaceMemberRepository(db)
+
+        self.membership_service = WorkspaceMemberService(db)
 
     # ----------------------------
     # CREATE WORKSPACE
@@ -29,61 +47,110 @@ class WorkspaceService:
     def create_workspace(
         self,
         payload: WorkspaceCreate,
-        owner_id: UUID,
+        owner_id: str,
     ):
+        owner = self.user_repository.get_by_id(owner_id)
+
+        if not owner:
+            raise ValueError("User not found")
+
         workspace = Workspace(
             name=payload.name,
             description=payload.description,
-            color=payload.color,
-            owner_id=owner_id,
+            owner_id=owner_id
         )
 
-        return self.repo.create(workspace)
+        workspace = self.workspace_repository.create(workspace)
+
+    # Auto Owner Membership
+        self.membership_service.add_member(
+            workspace.id,
+            owner_id,
+            WorkspaceRole.OWNER
+        )
+
+        return workspace
 
     # ----------------------------
     # LIST USER WORKSPACES
     # ----------------------------
-    def list_workspaces(self, owner_id: UUID):
-        return self.repo.get_user_workspaces(owner_id)
+    def list_workspaces(self, user_id: str):
+        memberships = self.membership_service.get_user_memberships(user_id)
+
+        return [membership.workspace for membership in memberships]
 
     # ----------------------------
     # GET SINGLE WORKSPACE
     # ----------------------------
-    def get_workspace(self, workspace_id: UUID, owner_id: UUID):
-        workspace = self.repo.get_by_id(workspace_id)
+    def get_workspace(self, workspace_id: str, user_id: str):
 
-        if not workspace:
-            raise HTTPException(404, "Workspace not found")
+        membership = self.membership_service.get_membership(
+            workspace_id,
+            user_id,
+        )
 
-        if workspace.owner_id != owner_id:
-            raise HTTPException(403, "Access denied")
+        if membership is None:
+            raise ValueError("Workspace not found")
 
-        return workspace
-
+        return membership.workspace
     # ----------------------------
     # UPDATE WORKSPACE
     # ----------------------------
     def update_workspace(
         self,
-        workspace_id: UUID,
-        payload: WorkspaceUpdate,
-        owner_id: UUID,
+        workspace_id: str,
+        payload,
+        user_id: str,
     ):
-        workspace = self.get_workspace(workspace_id, owner_id)
+        membership = self.membership_service.get_membership(
+            workspace_id,
+            user_id,
+        )
 
-        updates = payload.model_dump(exclude_unset=True)
+        if membership is None:
+            raise ValueError("Workspace not found")
 
-        for key, value in updates.items():
-            setattr(workspace, key, value)
+        if membership.role not in (
+            WorkspaceRole.OWNER,
+            WorkspaceRole.ADMIN,
+        ):
+            raise PermissionError("Permission denied")
 
-        return self.repo.update(workspace)
+        workspace = membership.workspace
+
+        workspace.name = payload.name
+        workspace.description = payload.description
+
+        return self.workspace_repository.update(workspace)
 
     # ----------------------------
     # DELETE WORKSPACE
     # ----------------------------
-    def delete_workspace(self, workspace_id: UUID, owner_id: UUID):
-        workspace = self.get_workspace(workspace_id, owner_id)
+    def delete_workspace(
+        self,
+        workspace_id: str,
+        user_id: str,
+    ):
+        membership = self.membership_service.get_membership(
+            workspace_id,
+            user_id,
+        )
 
-        self.repo.delete(workspace)
+        if membership is None:
+            raise ValueError("Workspace not found")
 
-        return {"message": "Workspace deleted successfully"}
+        if membership.role != WorkspaceRole.OWNER:
+            raise PermissionError("Only owner can delete workspace")
+
+        self.workspace_repository.delete(membership.workspace)
+
+        return {"message": "Workspace deleted"}
+
+
+class WorkspaceRole:
+    OWNER = "OWNER"
+    ADMIN = "ADMIN"
+    MEMBER = "MEMBER"
+
+
+    
