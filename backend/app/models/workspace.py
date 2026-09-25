@@ -82,3 +82,16 @@ class Workspace(Base):
         back_populates="workspace",
         cascade="all, delete-orphan",
     )
+
+    memberships = relationship(
+        "WorkspaceMember",
+        back_populates="workspace",
+        cascade="all, delete-orphan",
+    )
+
+    users = relationship(
+        "User",
+        secondary="workspace_members",
+        back_populates="workspaces",
+        viewonly=True,
+    )
