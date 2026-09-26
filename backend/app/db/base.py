@@ -1,7 +1,7 @@
-from app.db.base_class import Base
+# app/db/base.py
 
-from app.models.user import User
-from app.models.session import UserSession
-from app.models.workspace import Workspace
-from app.models.project import Project
-from app.models.workspace_member import WorkspaceMember
+from sqlalchemy.orm import DeclarativeBase  # type: ignore[reportMissingImports]
+
+
+class Base(DeclarativeBase):
+    pass

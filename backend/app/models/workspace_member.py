@@ -2,9 +2,10 @@ import enum
 import uuid
 from datetime import datetime
 
-from sqlalchemy import Enum, ForeignKey, DateTime  # pyright: ignore[reportMissingImports]
-from sqlalchemy.dialects.postgresql import UUID # pyright: ignore[reportMissingImports]
-from sqlalchemy.orm import Mapped, mapped_column, relationship # pyright: ignore[reportMissingImports]
+# pyright: reportMissingImports=false
+from sqlalchemy import DateTime, Enum, ForeignKey
+from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base
 

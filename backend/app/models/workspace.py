@@ -10,8 +10,8 @@ from sqlalchemy.orm import Mapped, relationship  # type: ignore[reportMissingImp
 from app.db.base_class import Base
 
 if TYPE_CHECKING:
-    from app.models.user import User
     from app.models.project import Project
+    from app.models.user import User
     from app.models.workspace_member import WorkspaceMember
 
 class Workspace(Base):

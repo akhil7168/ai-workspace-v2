@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session # pyright: ignore[reportMissingImports]
 from app.db.session import get_db
 from app.schemas.workspace import (
     WorkspaceCreate,
-    WorkspaceRoleUpdate
+    WorkspaceUpdate
 )
 from app.services.workspace_member_service import WorkspaceMemberService
 from app.core.auth import get_current_user
@@ -39,7 +39,7 @@ def list_members(
 def update_member_role(
     workspace_id: UUID,
     user_id: UUID,
-    payload: WorkspaceRoleUpdate,
+    payload: WorkspaceUpdate,
     db: Session = Depends(get_db),
     current_user=Depends(get_current_user)
 ):

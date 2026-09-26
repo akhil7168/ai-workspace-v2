@@ -13,8 +13,8 @@ from app.db.base_class import Base
 
 if TYPE_CHECKING:
     from app.models.project import Project
-    from app.models.workspace_member import WorkspaceMember
     from app.models.session import UserSession
+    from app.models.workspace_member import WorkspaceMember
 
 class UserRole(str, Enum):
     USER = "user"
