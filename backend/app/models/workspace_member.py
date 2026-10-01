@@ -1,13 +1,18 @@
 import enum
 import uuid
 from datetime import datetime
+from typing import TYPE_CHECKING
 
-# pyright: reportMissingImports=false
-from sqlalchemy import DateTime, Enum, ForeignKey
-from sqlalchemy.dialects.postgresql import UUID
-from sqlalchemy.orm import Mapped, mapped_column, relationship
+from sqlalchemy import DateTime, Enum, ForeignKey # pyright: ignore[reportMissingImports]
+from sqlalchemy.dialects.postgresql import UUID # pyright: ignore[reportMissingImports]
+from sqlalchemy.orm import Mapped, mapped_column, relationship # pyright: ignore[reportMissingImports]
 
-from app.db.base import Base
+from app.db.base_class import Base
+
+
+if TYPE_CHECKING:
+    from app.models.user import User
+    from app.models.workspace import Workspace
 
 
 class WorkspaceRole(str, enum.Enum):
@@ -42,6 +47,12 @@ class WorkspaceMember(Base):
         nullable=False,
     )
 
+    invited_by: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("users.id", ondelete="SET NULL"),
+        nullable=True,
+    )
+
     joined_at: Mapped[datetime] = mapped_column(
         DateTime,
         default=datetime.utcnow,
@@ -50,9 +61,16 @@ class WorkspaceMember(Base):
     workspace = relationship(
         "Workspace",
         back_populates="memberships",
+        foreign_keys=[workspace_id],
     )
 
     user = relationship(
         "User",
         back_populates="workspace_memberships",
+        foreign_keys=[user_id],
+    )
+
+    inviter = relationship(
+        "User",
+        foreign_keys=[invited_by],
     )

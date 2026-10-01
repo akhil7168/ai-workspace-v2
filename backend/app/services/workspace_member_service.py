@@ -1,5 +1,7 @@
 from typing import Any
 
+from app.schemas import workspace
+
 class HTTPException(Exception):
     """HTTP error raised by the service layer.
 
@@ -36,12 +38,29 @@ class WorkspaceMemberService:
         workspace_id,
         user_id,
         role,
-        ):
+        invited_by=None,
+    ):
+        user = self.user_repo.get_by_id(user_id)
+
+        if not user:
+            raise HTTPException(404, "User not found")
+
+        existing = self.member_repo.get_membership(
+            workspace_id,
+            user_id,
+        )
+
+        if existing:
+            raise HTTPException(
+                409,
+                "User is already a workspace member",
+            )
 
         return self.member_repo.create_member(
             workspace_id=workspace_id,
             user_id=user_id,
             role=role,
+            invited_by=invited_by,
         )
 
     def get_membership(
@@ -61,7 +80,7 @@ class WorkspaceMemberService:
 
     def list_members(self, workspace_id):
 
-        workspace = self.workspace_repo.get_workspace(workspace_id)
+        workspace = self.workspace_repo.get_by_id(workspace_id)
 
         if not workspace:
             raise HTTPException(404, "Workspace not found")

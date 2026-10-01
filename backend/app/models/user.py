@@ -12,9 +12,10 @@ from sqlalchemy.orm import Mapped, relationship  # pyright: ignore[reportMissing
 from app.db.base_class import Base
 
 if TYPE_CHECKING:
+    from app.models.workspace import Workspace
+    from app.models.workspace_member import WorkspaceMember
     from app.models.project import Project
     from app.models.session import UserSession
-    from app.models.workspace_member import WorkspaceMember
 
 class UserRole(str, Enum):
     USER = "user"
@@ -50,25 +51,25 @@ class User(Base):
         onupdate=lambda: datetime.now(timezone.utc),
     )
 
-    workspace_memberships: Mapped[list["WorkspaceMember"]] = relationship(
+    owned_workspaces = relationship(
+        "Workspace",
+        back_populates="owner",
+        foreign_keys="Workspace.owner_id",
+    )
+
+    workspace_memberships = relationship(
         "WorkspaceMember",
         back_populates="user",
         foreign_keys="WorkspaceMember.user_id",
+        cascade="all, delete-orphan",
     )
 
-    workspaces = relationship(
-        "Workspace",
-        secondary="workspace_members",
-        back_populates="users",
-        viewonly=True,
-    )
-
-    projects: Mapped[list["Project"]] = relationship(
+    projects = relationship(
         "Project",
         back_populates="owner",
     )
 
-    sessions: Mapped[list["UserSession"]] = relationship(
+    sessions = relationship(
         "UserSession",
         back_populates="user",
         cascade="all, delete-orphan",

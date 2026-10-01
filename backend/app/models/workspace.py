@@ -65,13 +65,13 @@ class Workspace(Base):
         onupdate=lambda: datetime.now(timezone.utc),
     )
 
-    owner: Mapped["User"] = relationship(
+    owner = relationship(
         "User",
         back_populates="owned_workspaces",
         foreign_keys=[owner_id],
     )
 
-    members: Mapped[list["WorkspaceMember"]] = relationship(
+    memberships = relationship(
         "WorkspaceMember",
         back_populates="workspace",
         cascade="all, delete-orphan",
@@ -81,17 +81,4 @@ class Workspace(Base):
         "Project",
         back_populates="workspace",
         cascade="all, delete-orphan",
-    )
-
-    memberships = relationship(
-        "WorkspaceMember",
-        back_populates="workspace",
-        cascade="all, delete-orphan",
-    )
-
-    users = relationship(
-        "User",
-        secondary="workspace_members",
-        back_populates="workspaces",
-        viewonly=True,
     )

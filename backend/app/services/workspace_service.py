@@ -147,10 +147,5 @@ class WorkspaceService:
         return {"message": "Workspace deleted"}
 
 
-class WorkspaceRole:
-    OWNER = "OWNER"
-    ADMIN = "ADMIN"
-    MEMBER = "MEMBER"
-
 
     

@@ -30,7 +30,6 @@ def register(
     "/login",
     response_model=TokenResponse,
 )
-@router.post("/login", response_model=TokenResponse)
 def login(
     request: Request,
     form_data: OAuth2PasswordRequestForm = Depends(),

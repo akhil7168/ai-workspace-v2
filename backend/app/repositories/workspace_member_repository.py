@@ -17,11 +17,18 @@ class WorkspaceMemberRepository:
 
         return member
 
-    def create_member(self, workspace_id, user_id, role):
+    def create_member(
+        self,
+        workspace_id,
+        user_id,
+        role,
+        invited_by=None,
+    ):
         member = WorkspaceMember(
             workspace_id=workspace_id,
             user_id=user_id,
             role=role,
+            invited_by=invited_by,
         )
 
         self.db.add(member)

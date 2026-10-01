@@ -1,3 +1,5 @@
+from app.core.authorization import require_workspace_permission
+from app.core.permissions import Permission
 from fastapi import APIRouter, Depends  # type: ignore[reportMissingImports]
 from uuid import UUID
 
@@ -22,6 +24,9 @@ router = APIRouter(prefix="/workspaces", tags=["Workspaces"])
 def create_workspace(
     payload: WorkspaceCreate,
     db: Session = Depends(get_db),
+    membership=Depends(
+        require_workspace_permission(Permission.WORKSPACE_CREATE)
+    ),
     current_user: User = Depends(get_current_user),
 ):
     return WorkspaceService(db).create_workspace(payload, current_user.id)
@@ -30,34 +35,45 @@ def create_workspace(
 @router.get("", response_model=list[WorkspaceResponse])
 def list_workspaces(
     db: Session = Depends(get_db),
+    membership=Depends(
+        require_workspace_permission(Permission.WORKSPACE_VIEW)
+    ),
     current_user: User = Depends(get_current_user),
 ):
     return WorkspaceService(db).list_workspaces(current_user.id)
 
 
-@router.get("/{workspace_id}", response_model=WorkspaceResponse)
+@router.get("/{workspace_id}")
 def get_workspace(
     workspace_id: UUID,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    membership=Depends(
+        require_workspace_permission(
+            Permission.WORKSPACE_VIEW
+        )
+    ),
 ):
     return WorkspaceService(db).get_workspace(
         workspace_id,
-        current_user.id,
+        membership.user_id,
     )
 
 
-@router.put("/{workspace_id}", response_model=WorkspaceResponse)
+@router.put("/{workspace_id}")
 def update_workspace(
     workspace_id: UUID,
     payload: WorkspaceUpdate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    membership=Depends(
+        require_workspace_permission(
+            Permission.WORKSPACE_UPDATE
+        )
+    ),
 ):
     return WorkspaceService(db).update_workspace(
         workspace_id,
         payload,
-        current_user.id,
+        membership.user_id,
     )
 
 
@@ -65,9 +81,13 @@ def update_workspace(
 def delete_workspace(
     workspace_id: UUID,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    membership=Depends(
+        require_workspace_permission(
+            Permission.WORKSPACE_DELETE
+        )
+    ),
 ):
     return WorkspaceService(db).delete_workspace(
         workspace_id,
-        current_user.id,
+        membership.user_id,
     )
