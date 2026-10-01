@@ -1,4 +1,4 @@
-from fastapi import HTTPException
+from fastapi import HTTPException # pyright: ignore[reportMissingImports]
 
 from app.core.permissions import Permission, ROLE_PERMISSIONS
 from app.models.workspace_member import WorkspaceRole
@@ -12,7 +12,10 @@ class PermissionService:
         permission: Permission,
     ) -> bool:
 
-        return permission in ROLE_PERMISSIONS.get(role, set())
+        return permission in ROLE_PERMISSIONS.get(
+            role,
+            set(),
+        )
 
     @staticmethod
     def require_permission(

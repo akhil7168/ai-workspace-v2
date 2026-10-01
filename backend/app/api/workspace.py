@@ -24,9 +24,6 @@ router = APIRouter(prefix="/workspaces", tags=["Workspaces"])
 def create_workspace(
     payload: WorkspaceCreate,
     db: Session = Depends(get_db),
-    membership=Depends(
-        require_workspace_permission(Permission.WORKSPACE_CREATE)
-    ),
     current_user: User = Depends(get_current_user),
 ):
     return WorkspaceService(db).create_workspace(payload, current_user.id)
@@ -43,7 +40,10 @@ def list_workspaces(
     return WorkspaceService(db).list_workspaces(current_user.id)
 
 
-@router.get("/{workspace_id}")
+@router.get(
+    "/{workspace_id}",
+    response_model=WorkspaceResponse,
+)
 def get_workspace(
     workspace_id: UUID,
     db: Session = Depends(get_db),
@@ -58,8 +58,10 @@ def get_workspace(
         membership.user_id,
     )
 
-
-@router.put("/{workspace_id}")
+@router.put(
+    "/{workspace_id}",
+    response_model=WorkspaceResponse,
+)
 def update_workspace(
     workspace_id: UUID,
     payload: WorkspaceUpdate,

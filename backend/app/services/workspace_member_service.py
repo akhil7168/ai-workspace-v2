@@ -1,24 +1,13 @@
 from typing import Any
 
-from app.schemas import workspace
-
-class HTTPException(Exception):
-    """HTTP error raised by the service layer.
-
-    Kept local so this service does not depend on FastAPI at import time.
-    """
-
-    def __init__(self, status_code: int, detail: str):
-        self.status_code = status_code
-        self.detail = detail
-        super().__init__(detail)
-
-# Keep the service importable when SQLAlchemy is not installed in the
-# environment used for static analysis.
-Session = Any
+from app.schemas import user
+from fastapi import HTTPException # pyright: ignore[reportMissingImports]
+from sqlalchemy.orm import Session # pyright: ignore[reportMissingImports]
 
 from app.models.workspace_member import WorkspaceMember, WorkspaceRole
-from app.repositories.workspace_member_repository import WorkspaceMemberRepository
+from app.repositories.workspace_member_repository import (
+    WorkspaceMemberRepository,
+)
 from app.repositories.workspace_repository import WorkspaceRepository
 from app.repositories.user_repository import UserRepository
 
@@ -43,17 +32,20 @@ class WorkspaceMemberService:
         user = self.user_repo.get_by_id(user_id)
 
         if not user:
-            raise HTTPException(404, "User not found")
+            raise HTTPException(
+                status_code=404,
+                detail="User not found",
+            )
 
         existing = self.member_repo.get_membership(
-            workspace_id,
-            user_id,
+            workspace_id=workspace_id,
+            user_id=user_id,
         )
 
         if existing:
             raise HTTPException(
-                409,
-                "User is already a workspace member",
+                status_code=409,
+                detail="User is already a workspace member",
             )
 
         return self.member_repo.create_member(
@@ -126,9 +118,9 @@ class WorkspaceMemberService:
 
         if not member:
             raise HTTPException(
-                403,
-                "User is not a workspace member",
-            )
+            status_code=403,
+        detail="User is not a workspace member",
+    )
 
         return member
 

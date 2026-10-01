@@ -1,7 +1,7 @@
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, status
-from sqlalchemy.orm import Session
+from fastapi import APIRouter, Depends, status # pyright: ignore[reportMissingImports]
+from sqlalchemy.orm import Session # pyright: ignore[reportMissingImports]
 
 from app.core.auth import get_current_user
 from app.core.authorization import require_workspace_permission
@@ -75,7 +75,7 @@ def update_member_role(
     db: Session = Depends(get_db),
     membership=Depends(
         require_workspace_permission(
-            Permission.MEMBER_UPDATE
+            Permission.MEMBER_UPDATE_ROLE
         )
     ),
 ):
