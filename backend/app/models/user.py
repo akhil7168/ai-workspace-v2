@@ -5,7 +5,7 @@ from datetime import datetime, timezone
 from enum import Enum
 from typing import TYPE_CHECKING
 
-from sqlalchemy import Boolean, Column, DateTime, String, Text  # pyright: ignore[reportMissingImports]
+from sqlalchemy import Boolean, Column, DateTime, String, Text # type: ignore
 from sqlalchemy.dialects.postgresql import UUID  # pyright: ignore[reportMissingImports]
 from sqlalchemy.orm import Mapped, relationship  # pyright: ignore[reportMissingImports]
 
