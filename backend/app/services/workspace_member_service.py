@@ -1,6 +1,8 @@
+from enum import member
 from typing import Any
 
 from app.schemas import user
+from backend.app.schemas import membership
 from fastapi import HTTPException # pyright: ignore[reportMissingImports]
 from sqlalchemy.orm import Session # pyright: ignore[reportMissingImports]
 
@@ -89,10 +91,23 @@ class WorkspaceMemberService:
             user_id=user_id,
         )
 
-        if membership:
-            self.member_repo.delete_member(membership)
+        if not membership:
+            raise HTTPException(
+                404,
+                "Membership not found",
+            )
 
-        return {"message": "Member removed"}
+        if membership.role == WorkspaceRole.OWNER:
+            raise HTTPException(
+                400,
+                "Workspace owner cannot be removed",
+            )
+
+        self.member_repo.delete_member(membership)
+
+        return {
+            "message": "Member removed",
+        }
 
     def update_role(
         self,
@@ -100,13 +115,33 @@ class WorkspaceMemberService:
         user_id,
         role: WorkspaceRole,
     ):
-
-        member = self.member_repo.get_membership(workspace_id, user_id)
+        member = self.member_repo.get_membership(
+            workspace_id=workspace_id,
+            user_id=user_id,
+        )
 
         if not member:
-            raise HTTPException(404, "Membership not found")
+            raise HTTPException(
+                status_code=404,
+                detail="Membership not found",
+            )
 
-        return self.member_repo.update_role(member, role)
+        if member.role == WorkspaceRole.OWNER:
+            raise HTTPException(
+                status_code=400,
+                detail="Workspace owner role cannot be changed",
+            )
+
+        if role == WorkspaceRole.OWNER:
+            raise HTTPException(
+                status_code=400,
+                detail="A second workspace owner cannot be created",
+            )
+
+        return self.member_repo.update_role(
+            member,
+            role,
+        )
 
     def require_workspace_member(
         self,
@@ -118,9 +153,9 @@ class WorkspaceMemberService:
 
         if not member:
             raise HTTPException(
-            status_code=403,
-        detail="User is not a workspace member",
-    )
+                status_code=403,
+                detail="User is not a workspace member",
+            )
 
         return member
 

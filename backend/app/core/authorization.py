@@ -38,3 +38,40 @@ def require_workspace_permission(permission: Permission):
         return membership
 
     return checker
+
+def require_project_permission(permission: Permission):
+
+    def checker(
+        project_id: UUID,
+        db: Session = Depends(get_db),
+        current_user=Depends(get_current_user),
+    ):
+        from app.services.project_service import ProjectService
+
+        project_service = ProjectService(db)
+
+        project = project_service.get_project(
+            project_id
+        )
+
+        membership_service = WorkspaceMemberService(db)
+
+        membership = membership_service.get_membership(
+            project.workspace_id,
+            current_user.id,
+        )
+
+        if membership is None:
+            raise HTTPException(
+                status_code=403,
+                detail="User is not a workspace member",
+            )
+
+        PermissionService.require_permission(
+            membership.role,
+            permission,
+        )
+
+        return membership
+
+    return checker

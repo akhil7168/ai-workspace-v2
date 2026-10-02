@@ -1,6 +1,8 @@
 from uuid import UUID
 from typing import Any, TYPE_CHECKING, TypeAlias
 
+from app.schemas import membership
+
 # Keep service type annotations usable when SQLAlchemy is not available to the
 # editor/runtime environment.
 if TYPE_CHECKING:
@@ -99,29 +101,40 @@ class WorkspaceService:
     def update_workspace(
         self,
         workspace_id: str,
-        payload,
-        user_id: str,
+        payload: WorkspaceUpdate,
+        user_id: str
     ):
         membership = self.membership_service.get_membership(
             workspace_id,
-            user_id,
+            user_id
         )
 
         if membership is None:
-            raise ValueError("Workspace not found")
-
-        if membership.role not in (
-            WorkspaceRole.OWNER,
-            WorkspaceRole.ADMIN,
-        ):
-            raise PermissionError("Permission denied")
+            raise HTTPException(
+                status_code=404,
+                detail="Workspace not found",
+            )
 
         workspace = membership.workspace
 
-        workspace.name = payload.name
-        workspace.description = payload.description
+        if payload.name is not None:
+            workspace.name = payload.name
 
-        return self.workspace_repository.update(workspace)
+        if payload.description is not None:
+            workspace.description = payload.description
+
+        if payload.color is not None:
+            workspace.color = payload.color
+
+        if payload.icon is not None:
+            workspace.icon = payload.icon
+
+        if payload.is_archived is not None:
+            workspace.is_archived = payload.is_archived
+
+        return self.workspace_repository.update(
+            workspace
+        )
 
     # ----------------------------
     # DELETE WORKSPACE
@@ -133,11 +146,11 @@ class WorkspaceService:
     ):
         membership = self.membership_service.get_membership(
             workspace_id,
-            user_id,
+            user_id
         )
 
         if membership is None:
-            raise ValueError("Workspace not found")
+            raise HTTPException(status_code=404, detail="Workspace not found")
 
         if membership.role != WorkspaceRole.OWNER:
             raise PermissionError("Only owner can delete workspace")
