@@ -1,7 +1,8 @@
 from uuid import UUID
 from typing import Optional
 from datetime import datetime
-from pydantic import BaseModel
+
+from pydantic import BaseModel, ConfigDict
 
 from app.models.project import ProjectStatus
 
@@ -18,16 +19,13 @@ class ProjectUpdate(BaseModel):
 
 
 class ProjectResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
     id: UUID
     title: str
     description: Optional[str]
     status: ProjectStatus
-
     workspace_id: UUID
     created_by: UUID
-
     created_at: datetime
     updated_at: datetime
-
-    class Config:
-        from_attributes = True

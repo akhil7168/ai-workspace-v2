@@ -2,7 +2,7 @@ from enum import member
 from typing import Any
 
 from app.schemas import user
-from backend.app.schemas import membership
+from app.schemas import membership
 from fastapi import HTTPException # pyright: ignore[reportMissingImports]
 from sqlalchemy.orm import Session # pyright: ignore[reportMissingImports]
 

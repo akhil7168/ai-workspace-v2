@@ -1,6 +1,7 @@
 from uuid import UUID
 from typing import Any
-from fastapi import HTTPException # type: ignore
+
+from fastapi import HTTPException  # type: ignore[reportMissingImports]
 
 from app.models.project import Project, ProjectStatus
 from app.repositories.project_repository import ProjectRepository
@@ -9,7 +10,6 @@ from app.schemas.project import ProjectCreate, ProjectUpdate
 
 
 class ProjectService:
-
     def __init__(self, db: Any):
         self.db = db
         self.project_repo = ProjectRepository(db)
@@ -24,7 +24,10 @@ class ProjectService:
         workspace = self.workspace_repo.get_by_id(workspace_id)
 
         if workspace is None:
-            raise HTTPException(404, "Workspace not found")
+            raise HTTPException(
+                status_code=404,
+                detail="Workspace not found",
+            )
 
         project = Project(
             title=payload.title,
@@ -40,7 +43,10 @@ class ProjectService:
         workspace = self.workspace_repo.get_by_id(workspace_id)
 
         if workspace is None:
-            raise HTTPException(404, "Workspace not found")
+            raise HTTPException(
+                status_code=404,
+                detail="Workspace not found",
+            )
 
         return self.project_repo.get_workspace_projects(workspace_id)
 
@@ -48,7 +54,10 @@ class ProjectService:
         project = self.project_repo.get_by_id(project_id)
 
         if project is None:
-            raise HTTPException(404, "Project not found")
+            raise HTTPException(
+                status_code=404,
+                detail="Project not found",
+            )
 
         return project
 
@@ -56,6 +65,7 @@ class ProjectService:
         self,
         project_id: UUID,
         payload: ProjectUpdate,
+        current_user_id: UUID,
     ):
         project = self.get_project(project_id)
 
@@ -70,15 +80,43 @@ class ProjectService:
 
         return self.project_repo.update(project)
 
-    def archive_project(self, project_id: UUID):
+    def archive_project(
+        self,
+        project_id: UUID,
+        current_user_id: UUID,
+    ):
         project = self.get_project(project_id)
 
         project.status = ProjectStatus.ARCHIVED
 
         return self.project_repo.update(project)
 
-    def delete_project(self, project_id: UUID):
+    def delete_project(
+        self,
+        project_id: UUID,
+        current_user_id: UUID,
+    ):
         project = self.get_project(project_id)
+
         self.project_repo.delete(project)
 
-        return {"message": "Project deleted successfully"}
+        return {
+            "message": "Project deleted successfully"
+        }
+
+    def require_owner(
+        self,
+        project_id: UUID,
+        current_user_id: UUID,
+    ):
+        project = self.get_project(
+            project_id
+        )
+
+        if project.created_by != current_user_id:
+            raise HTTPException(
+                status_code=403,
+                detail="Project ownership required",
+            )
+
+        return project
