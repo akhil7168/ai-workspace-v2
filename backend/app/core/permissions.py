@@ -1,6 +1,7 @@
 from enum import Enum
 
 from app.models.workspace_member import WorkspaceRole
+from app.models.project_member import ProjectRole
 
 
 class Permission(str, Enum):
@@ -72,5 +73,29 @@ ROLE_PERMISSIONS = {
         Permission.MEMBER_VIEW,
 
         Permission.PROJECT_VIEW,
+    },
+}
+
+PROJECT_ROLE_PERMISSIONS = {
+    ProjectRole.OWNER: {
+        Permission.PROJECT_MEMBER_VIEW,
+        Permission.PROJECT_MEMBER_ADD,
+        Permission.PROJECT_MEMBER_UPDATE_ROLE,
+        Permission.PROJECT_MEMBER_REMOVE,
+    },
+
+    ProjectRole.ADMIN: {
+        Permission.PROJECT_MEMBER_VIEW,
+        Permission.PROJECT_MEMBER_ADD,
+        Permission.PROJECT_MEMBER_UPDATE_ROLE,
+        Permission.PROJECT_MEMBER_REMOVE,
+    },
+
+    ProjectRole.MEMBER: {
+        Permission.PROJECT_MEMBER_VIEW,
+    },
+
+    ProjectRole.VIEWER: {
+        Permission.PROJECT_MEMBER_VIEW,
     },
 }
