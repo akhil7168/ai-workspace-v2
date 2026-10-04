@@ -18,6 +18,11 @@ class Permission(str, Enum):
     PROJECT_UPDATE = "project:update"
     PROJECT_DELETE = "project:delete"
 
+    PROJECT_MEMBER_VIEW = "project_member:view"
+    PROJECT_MEMBER_ADD = "project_member:add"
+    PROJECT_MEMBER_UPDATE_ROLE = "project_member:update_role"
+    PROJECT_MEMBER_REMOVE = "project_member:remove"
+
 
 ROLE_PERMISSIONS = {
     WorkspaceRole.OWNER: {

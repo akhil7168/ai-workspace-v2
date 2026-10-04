@@ -71,3 +71,9 @@ class Project(Base):
         "User",
         back_populates="projects"
     )
+
+    memberships = relationship(
+        "ProjectMember",
+        back_populates="project",
+        cascade="all, delete-orphan",
+    )
