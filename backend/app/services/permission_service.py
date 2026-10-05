@@ -1,6 +1,11 @@
-from fastapi import HTTPException # pyright: ignore[reportMissingImports]
+from fastapi import HTTPException  # type: ignore[reportMissingImports]
 
-from app.core.permissions import PROJECT_ROLE_PERMISSIONS, Permission, ROLE_PERMISSIONS
+from app.core.permissions import (
+    Permission,
+    ROLE_PERMISSIONS,
+    PROJECT_ROLE_PERMISSIONS,
+)
+
 from app.models.workspace_member import WorkspaceRole
 from app.models.project_member import ProjectRole
 
@@ -32,29 +37,27 @@ class PermissionService:
                 detail="Permission denied",
             )
 
-        @staticmethod
-        def has_project_permission(
-            role: ProjectRole,
-            permission: Permission,
-        ) -> bool:
+    @staticmethod
+    def has_project_permission(
+        role: ProjectRole,
+        permission: Permission,
+    ) -> bool:
 
-            from app.core.permissions import PROJECT_ROLE_PERMISSIONS
+        return permission in PROJECT_ROLE_PERMISSIONS.get(
+            role,
+            set(),
+        )
 
-            return permission in PROJECT_ROLE_PERMISSIONS.get(
-                role,
-                set(),
-            )
-
-        @staticmethod
-        def require_project_permission(
-            role: ProjectRole,
-            permission: Permission,
+    @staticmethod
+    def require_project_permission(
+        role: ProjectRole,
+        permission: Permission,
+    ):
+        if not PermissionService.has_project_permission(
+            role,
+            permission,
         ):
-            if not PermissionService.has_project_permission(
-                role,
-                permission,
-            ):
-                raise HTTPException(
-                    status_code=403,
-                    detail="Project permission denied",
-                )
+            raise HTTPException(
+                status_code=403,
+                detail="Project permission denied",
+            )
