@@ -1,17 +1,43 @@
-POST /auth/register
+# API Architecture
 
-POST /auth/login
+## Authentication
 
-GET /users/me
+POST /api/v1/auth/login
+...
 
-POST /workspaces
 
-GET /workspaces
+## Users
 
-POST /projects
+...
 
-GET /projects
+## Authentication
 
-POST /documents/upload
+...
 
-POST /chat
+## Workspaces
+
+...
+
+## Workspace Membership
+
+...
+
+## Projects
+
+...
+
+## Project Membership
+
+...
+
+## Health
+
+
+
+Method
+Path
+Authentication
+Authorization
+Request
+Response
+Possible errors

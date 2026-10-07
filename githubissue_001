@@ -1,0 +1,39 @@
+## Objective
+
+Document the current AI Workspace V2 backend architecture before
+making structural changes.
+
+## Scope
+
+- Backend folder architecture
+- Request lifecycle
+- Authentication
+- Authorization
+- Services
+- Repositories
+- Database
+- Alembic migration chain
+- Current schema/model drift
+- Technical debt
+
+## Deliverables
+
+- docs/architecture.md
+- docs/api.md
+- docs/database.md
+- docs/decisions.md
+
+## Out of Scope
+
+No production code changes.
+
+## Definition of Done
+
+- Architecture is documented
+- Database relationships are documented
+- Migration chain is documented
+- Authentication flow is documented
+- Authorization flow is documented
+- Known inconsistencies are explicitly recorded
+- Existing test baseline recorded
+- Alembic state verified
