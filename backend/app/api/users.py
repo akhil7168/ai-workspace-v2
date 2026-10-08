@@ -2,7 +2,6 @@
 # pyright: reportMissingImports=false
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
-from typing import Any
 
 from app.core.auth import (
     get_current_active_user,
@@ -61,7 +60,7 @@ def get_profile(
 )
 def update_profile(
     payload: UserProfileUpdate,
-    db: Any = Depends(get_db),
+    db: Session = Depends(get_db),
     current_user=Depends(get_current_active_user),
 ):
     service = UserService(db)
@@ -79,7 +78,7 @@ def update_profile(
 @router.patch("/password")
 def update_password(
     payload: PasswordUpdate,
-    db: Any = Depends(get_db),
+    db: Session = Depends(get_db),
     current_user=Depends(get_current_active_user),
 ):
     service = UserService(db)
@@ -107,6 +106,6 @@ def admin_route(
 @router.get("/all")
 def get_all_users(
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_roles("admin")),
+    current_user: User = Depends(require_roles(UserRole.ADMIN)),
 ):
     return UserService(db).get_all_users()

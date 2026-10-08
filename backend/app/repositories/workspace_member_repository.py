@@ -1,12 +1,12 @@
 from enum import member
-from typing import Any
+from sqlalchemy import Session
 
 from app.models.workspace_member import WorkspaceMember, WorkspaceRole
 
 
 class WorkspaceMemberRepository:
 
-    def __init__(self, db: Any):
+    def __init__(self, db: Session):
         self.db = db
 
     def add_member(self, member: WorkspaceMember):

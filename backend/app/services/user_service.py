@@ -52,14 +52,14 @@ class UserService:
 
         if not verify_password(
             payload.current_password,
-            user.hashed_password,
+            user.password_hash,
         ):
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Current password is incorrect",
             )
 
-        user.hashed_password = hash_password(payload.new_password)
+        user.password_hash = hash_password(payload.new_password)
 
         self.repository.db.commit()
 

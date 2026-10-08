@@ -1,12 +1,12 @@
 from uuid import UUID
-from typing import Any
+from sqlalchemy import Session
 
 from app.models.workspace import Workspace
 
 
 class WorkspaceRepository:
 
-    def __init__(self, db: Any):
+    def __init__(self, db: Session):
         self.db = db
 
     def create(self, workspace):

@@ -9,15 +9,16 @@ from app.core.config import settings
 from app.db.session import get_db
 from app.models.user import User
 
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login")
+oauth2_scheme = OAuth2PasswordBearer(
+    tokenUrl="/api/v1/auth/login"
+)
 
 
 # -----------------------------
 # Authentication
 # -----------------------------
-def get_current_user(
+def get_current_user_payload(
     token: str = Depends(oauth2_scheme),
-    db: Session = Depends(get_db),
 ):
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
@@ -31,21 +32,34 @@ def get_current_user(
             algorithms=[settings.ALGORITHM],
         )
 
-        user_id = payload.get("sub")
-
-        if user_id is None:
+        if payload.get("sub") is None:
             raise credentials_exception
 
-        user_id = UUID(user_id)
+        return payload
 
-    except (JWTError, ValueError):
+    except JWTError:
+        raise credentials_exception
+
+
+def get_current_user(
+    payload: dict = Depends(get_current_user_payload),
+    db: Session = Depends(get_db),
+):
+    credentials_exception = HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="Invalid authentication credentials",
+    )
+
+    try:
+        user_id = UUID(payload["sub"])
+    except (KeyError, ValueError):
         raise credentials_exception
 
     user = db.query(User).filter(User.id == user_id).first()
 
     if not user:
         raise HTTPException(
-            status_code=401,
+            status_code=status.HTTP_401_UNAUTHORIZED,
             detail="User not found",
         )
 
@@ -70,7 +84,7 @@ def get_current_active_user(
 # -----------------------------
 # Role Based Access Control
 # -----------------------------
-def require_roles(*allowed_roles: str):
+def require_roles(*allowed_roles):
     """
     Usage:
         Depends(require_roles("admin"))

@@ -1,5 +1,5 @@
 from uuid import UUID
-from typing import Any
+from sqlalchemy import Session
 
 from fastapi import HTTPException  # type: ignore[reportMissingImports]
 
@@ -10,7 +10,7 @@ from app.schemas.project import ProjectCreate, ProjectUpdate
 
 
 class ProjectService:
-    def __init__(self, db: Any):
+    def __init__(self, db: Session):
         self.db = db
         self.project_repo = ProjectRepository(db)
         self.workspace_repo = WorkspaceRepository(db)

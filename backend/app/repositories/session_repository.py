@@ -1,10 +1,10 @@
-from typing import Any
+from sqlalchemy import Session
 
 from app.models.session import UserSession
 
 class SessionRepository:
 
-    def __init__(self, db: Any):
+    def __init__(self, db: Session):
         self.db = db
 
     def create(self, session: UserSession):

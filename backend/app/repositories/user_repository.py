@@ -1,4 +1,4 @@
-from typing import Any
+from sqlalchemy import Session
 
 from app.models.user import User
 
@@ -7,7 +7,7 @@ from uuid import UUID
 
 class UserRepository:
 
-    def __init__(self, db: Any):
+    def __init__(self, db: Session):
         self.db = db
 
     # -----------------------------------
@@ -77,7 +77,7 @@ class UserRepository:
         hashed_password: str,
     ):
 
-        user.hashed_password = hashed_password
+        user.password_hash = hashed_password
 
         self.db.commit()
         self.db.refresh(user)

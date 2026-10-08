@@ -1,20 +1,31 @@
-from fastapi import APIRouter
-from sqlalchemy import text
+from fastapi import APIRouter  # type: ignore[import-not-found]
+from fastapi.responses import JSONResponse  # type: ignore[import-not-found]
+from sqlalchemy import text  # type: ignore[import-not-found]
 
-from app.core.database import engine
+from app.db.session import engine
+
 
 router = APIRouter(
     prefix="/health",
-    tags=["Health"]
+    tags=["Health"],
 )
 
 
 @router.get("/")
 def health_check():
-    with engine.connect() as connection:
-        connection.execute(text("SELECT 1"))
+    try:
+        with engine.connect() as connection:
+            connection.execute(text("SELECT 1"))
+    except Exception:
+        return JSONResponse(
+            status_code=503,
+            content={
+                "status": "unhealthy",
+                "database": "disconnected",
+            },
+        )
 
     return {
         "status": "healthy",
-        "database": "connected"
+        "database": "connected",
     }

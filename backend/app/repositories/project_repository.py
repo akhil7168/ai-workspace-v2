@@ -1,12 +1,12 @@
 from uuid import UUID
-from typing import Any
+from sqlalchemy import Session
 
 from app.models.project import Project, ProjectStatus
 
 
 class ProjectRepository:
 
-    def __init__(self, db: Any):
+    def __init__(self, db: Session):
         self.db = db
 
     def create(self, project: Project):

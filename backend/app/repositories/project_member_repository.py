@@ -1,11 +1,11 @@
 from uuid import UUID
-from typing import Any
+from sqlalchemy.orm import Session
 
 from app.models.project_member import ProjectMember
 
 
 class ProjectMemberRepository:
-    def __init__(self, db: Any):
+    def __init__(self, db: Session):
         self.db = db
 
     def create(self, member: ProjectMember):

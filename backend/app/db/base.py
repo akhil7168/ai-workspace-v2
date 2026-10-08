@@ -13,6 +13,7 @@ __all__ = [
     "User",
     "UserSession",
     "Workspace",
-    "Project",
     "WorkspaceMember",
+    "Project",
+    "ProjectMember",
 ]

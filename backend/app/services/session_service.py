@@ -1,13 +1,13 @@
 from datetime import datetime, timedelta, timezone
 
-from typing import Any
+from sqlalchemy.orm import Session
 
 from app.models.session import UserSession
 from app.repositories.session_repository import SessionRepository
 
 
 class SessionService:
-    def __init__(self, db: Any):
+    def __init__(self, db: Session):
         self.db = db
         self.repo = SessionRepository(db)
 
