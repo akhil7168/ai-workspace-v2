@@ -1,5 +1,5 @@
 from uuid import UUID
-from sqlalchemy import Session
+from sqlalchemy.orm import Session
 
 from app.models.project import Project, ProjectStatus
 

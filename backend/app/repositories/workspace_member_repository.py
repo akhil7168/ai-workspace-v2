@@ -1,5 +1,5 @@
 from enum import member
-from sqlalchemy import Session
+from sqlalchemy.orm import Session
 
 from app.models.workspace_member import WorkspaceMember, WorkspaceRole
 

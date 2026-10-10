@@ -1,79 +1,82 @@
-from datetime import datetime, timedelta, timezone
 
-from sqlalchemy.orm import Session
+from datetime import datetime, timezone
+from uuid import UUID
 
+from app.core.security import create_refresh_token, refresh_token_expiry
 from app.models.session import UserSession
 from app.repositories.session_repository import SessionRepository
 
 
 class SessionService:
-    def __init__(self, db: Session):
+    def __init__(self, db):
         self.db = db
         self.repo = SessionRepository(db)
 
-    # -----------------------------
-    # Create Session
-    # -----------------------------
     def create_session(
         self,
-        user_id,
+        user_id: UUID,
         refresh_token: str,
-        user_agent: str,
-        ip_address: str,
+        user_agent: str = "",
+        ip_address: str = "",
     ) -> UserSession:
-
         session = UserSession(
             user_id=user_id,
             refresh_token=refresh_token,
             user_agent=user_agent,
             ip_address=ip_address,
-            expires_at=datetime.now(timezone.utc) + timedelta(days=7),
+            expires_at=refresh_token_expiry(),
             is_revoked=False,
         )
+        return self.repo.create(session)
 
-        self.repo.create(session)
-        return session
-
-    # -----------------------------
-    # Get Session
-    # -----------------------------
     def get_by_refresh_token(self, refresh_token: str):
         return self.repo.get_by_refresh_token(refresh_token)
 
-    # -----------------------------
-    # Rotate Refresh Token
-    # -----------------------------
-    def rotate_refresh_token(self, old_token: str, new_token: str):
-        session = self.repo.get_by_refresh_token(old_token)
+    def rotate_refresh_token(
+        self,
+        old_token: str,
+    ) -> tuple[UserSession, str] | None:
+        session = self.repo.get_active_by_refresh_token(old_token)
 
-        if not session:
+        if session is None:
             return None
 
-        session.refresh_token = new_token
-        self.repo.update(session)
+        expires_at = session.expires_at
+        if expires_at.tzinfo is None:
+            expires_at = expires_at.replace(tzinfo=timezone.utc)
 
-        return session
+        now = datetime.now(timezone.utc)
 
-    # -----------------------------
-    # Revoke Session
-    # -----------------------------
-    def revoke_session(self, refresh_token: str):
-        session = self.repo.get_by_refresh_token(refresh_token)
+        if expires_at <= now:
+            self.repo.revoke(session)
+            return None
 
-        if session:
-            session.is_revoked = True
-            self.repo.update(session)
+        new_token = create_refresh_token(subject=str(session.user_id))
 
-        return session
+        try:
+            updated_session = self.repo.rotate(
+                session=session,
+                new_token=new_token,
+                expires_at=refresh_token_expiry(),
+                now=now,
+            )
+        except Exception:
+            self.db.rollback()
+            raise
 
-    # -----------------------------
-    # Revoke All Sessions
-    # -----------------------------
-    def revoke_all_sessions(self, user_id):
-        sessions = self.repo.get_user_sessions(user_id)
+        if updated_session is None:
+            return None
 
-        for session in sessions:
-            session.is_revoked = True
-            self.repo.update(session)
+        return updated_session, new_token
 
-        return len(sessions)
+    def revoke_session(self, refresh_token: str) -> bool:
+        session = self.repo.get_active_by_refresh_token(refresh_token)
+
+        if session is None:
+            return False
+
+        self.repo.revoke(session)
+        return True
+
+    def revoke_all_sessions(self, user_id: UUID) -> int:
+        return self.repo.revoke_all_user_sessions(user_id)

@@ -10,7 +10,7 @@ from app.db.session import get_db
 from app.models.user import User
 
 oauth2_scheme = OAuth2PasswordBearer(
-    tokenUrl="/api/v1/auth/login"
+    tokenUrl="/auth/login"
 )
 
 
@@ -31,6 +31,9 @@ def get_current_user_payload(
             settings.SECRET_KEY,
             algorithms=[settings.ALGORITHM],
         )
+
+        if payload.get("type") != "access":
+            raise credentials_exception
 
         if payload.get("sub") is None:
             raise credentials_exception

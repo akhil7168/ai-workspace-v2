@@ -1,5 +1,4 @@
-from sqlalchemy import Session
-
+from sqlalchemy.orm import Session
 from app.models.user import User
 
 from uuid import UUID
@@ -83,3 +82,6 @@ class UserRepository:
         self.db.refresh(user)
 
         return user
+
+    def get_all(self):
+        return self.db.query(User).all()
