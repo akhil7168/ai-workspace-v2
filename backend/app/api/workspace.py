@@ -32,9 +32,6 @@ def create_workspace(
 @router.get("", response_model=list[WorkspaceResponse])
 def list_workspaces(
     db: Session = Depends(get_db),
-    membership=Depends(
-        require_workspace_permission(Permission.WORKSPACE_VIEW)
-    ),
     current_user: User = Depends(get_current_user),
 ):
     return WorkspaceService(db).list_workspaces(current_user.id)

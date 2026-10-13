@@ -6,6 +6,7 @@ from sqlalchemy.orm import Session # pyright: ignore[reportMissingImports]
 from app.core.auth import get_current_user
 from app.core.permissions import Permission
 from app.db.session import get_db
+from app.repositories.workspace_repository import WorkspaceRepository
 from app.services.permission_service import PermissionService
 from app.services.workspace_member_service import WorkspaceMemberService
 
@@ -17,6 +18,14 @@ def require_workspace_permission(permission: Permission):
         db: Session = Depends(get_db),
         current_user=Depends(get_current_user),
     ):
+        workspace = WorkspaceRepository(db).get_by_id(workspace_id)
+
+        if workspace is None:
+            raise HTTPException(
+                status_code=404,
+                detail="Workspace not found",
+            )
+
         service = WorkspaceMemberService(db)
 
         membership = service.get_membership(
@@ -26,8 +35,8 @@ def require_workspace_permission(permission: Permission):
 
         if membership is None:
             raise HTTPException(
-                status_code=403,
-                detail="User is not a workspace member",
+                status_code=404,
+                detail="Workspace not found",
             )
 
         PermissionService.require_permission(

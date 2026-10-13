@@ -92,7 +92,10 @@ class WorkspaceService:
         )
 
         if membership is None:
-            raise ValueError("Workspace not found")
+            raise HTTPException(
+                status_code=404,
+                detail="Workspace not found",
+            )
 
         return membership.workspace
     # ----------------------------
@@ -153,7 +156,10 @@ class WorkspaceService:
             raise HTTPException(status_code=404, detail="Workspace not found")
 
         if membership.role != WorkspaceRole.OWNER:
-            raise PermissionError("Only owner can delete workspace")
+            raise HTTPException(
+                status_code=403,
+                detail="Only owner can delete workspace",
+            )
 
         self.workspace_repository.delete(membership.workspace)
 
