@@ -1,7 +1,7 @@
 # pyright: reportMissingImports=false
 from uuid import UUID
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 
 from app.db.session import get_db
@@ -57,8 +57,14 @@ def list_projects(
     _permission=Depends(
         require_workspace_permission(Permission.PROJECT_VIEW)
     ),
+    limit: int = Query(20, ge=1, le=100),
+    offset: int = Query(0, ge=0),
 ):
-    return ProjectService(db).list_workspace_projects(workspace_id)
+    return ProjectService(db).list_workspace_projects(
+        workspace_id,
+        limit=limit,
+        offset=offset,
+    )
 
 
 @router.get(

@@ -1,6 +1,7 @@
 from enum import member
 from sqlalchemy.orm import Session
 
+from app.models.workspace import Workspace
 from app.models.workspace_member import WorkspaceMember, WorkspaceRole
 
 
@@ -58,15 +59,25 @@ class WorkspaceMemberRepository:
             .all()
         )
 
-    def get_user_workspaces(self, user_id):
+    def get_user_workspaces(self, user_id, limit: int | None = None, offset: int = 0):
 
-        return (
+        query = (
             self.db.query(WorkspaceMember)
+            .join(Workspace, Workspace.id == WorkspaceMember.workspace_id)
             .filter(
-                WorkspaceMember.user_id == user_id
+                WorkspaceMember.user_id == user_id,
+                Workspace.is_archived.is_(False),
             )
-            .all()
+            .order_by(Workspace.created_at.desc())
         )
+
+        if offset:
+            query = query.offset(offset)
+
+        if limit is not None:
+            query = query.limit(limit)
+
+        return query.all()
 
     def update_role(self, member, role: WorkspaceRole):
 

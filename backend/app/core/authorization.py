@@ -20,7 +20,7 @@ def require_workspace_permission(permission: Permission):
     ):
         workspace = WorkspaceRepository(db).get_by_id(workspace_id)
 
-        if workspace is None:
+        if workspace is None or workspace.is_archived:
             raise HTTPException(
                 status_code=404,
                 detail="Workspace not found",

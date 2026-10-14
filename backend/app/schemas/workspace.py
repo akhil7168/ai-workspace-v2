@@ -2,21 +2,21 @@ from uuid import UUID
 from datetime import datetime
 from typing import Optional
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class WorkspaceCreate(BaseModel):
-    name: str
-    description: Optional[str] = None
-    color: Optional[str] = "#6366F1"
-    icon: Optional[str] = "folder"
+    name: str = Field(..., min_length=1, max_length=120)
+    description: Optional[str] = Field(default=None, max_length=2000)
+    color: Optional[str] = Field(default="#6366F1", min_length=1, max_length=32)
+    icon: Optional[str] = Field(default="folder", min_length=1, max_length=64)
 
 
 class WorkspaceUpdate(BaseModel):
-    name: Optional[str] = None
-    description: Optional[str] = None
-    color: Optional[str] = None
-    icon: Optional[str] = None
+    name: Optional[str] = Field(default=None, min_length=1, max_length=120)
+    description: Optional[str] = Field(default=None, max_length=2000)
+    color: Optional[str] = Field(default=None, min_length=1, max_length=32)
+    icon: Optional[str] = Field(default=None, min_length=1, max_length=64)
     is_archived: Optional[bool] = None
 
 

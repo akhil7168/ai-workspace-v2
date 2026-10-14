@@ -53,7 +53,13 @@ def require_project_member_permission(
 
         project = project_repo.get_by_id(project_id)
 
-        if project is None:
+        if project is None or project.status == "ARCHIVED":
+            raise HTTPException(
+                status_code=404,
+                detail="Project not found",
+            )
+
+        if project.workspace and project.workspace.is_archived:
             raise HTTPException(
                 status_code=404,
                 detail="Project not found",

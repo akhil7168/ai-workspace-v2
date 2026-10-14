@@ -22,13 +22,23 @@ class ProjectRepository:
             .first()
         )
 
-    def get_workspace_projects(self, workspace_id: UUID):
-        return (
+    def get_workspace_projects(self, workspace_id: UUID, limit: int | None = None, offset: int = 0):
+        query = (
             self.db.query(Project)
-            .filter(Project.workspace_id == workspace_id)
+            .filter(
+                Project.workspace_id == workspace_id,
+                Project.status != ProjectStatus.ARCHIVED,
+            )
             .order_by(Project.created_at.desc())
-            .all()
         )
+
+        if offset:
+            query = query.offset(offset)
+
+        if limit is not None:
+            query = query.limit(limit)
+
+        return query.all()
 
     def update(self, project: Project):
         self.db.commit()

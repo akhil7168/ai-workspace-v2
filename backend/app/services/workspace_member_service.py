@@ -67,8 +67,8 @@ class WorkspaceMemberService:
             user_id=user_id,
         )
 
-    def get_user_memberships(self, user_id):
-        return self.member_repo.get_user_workspaces(user_id)
+    def get_user_memberships(self, user_id, limit: int | None = None, offset: int = 0):
+        return self.member_repo.get_user_workspaces(user_id, limit=limit, offset=offset)
 
     
 

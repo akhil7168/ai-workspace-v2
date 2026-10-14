@@ -29,6 +29,12 @@ class ProjectService:
                 detail="Workspace not found",
             )
 
+        if workspace.is_archived:
+            raise HTTPException(
+                status_code=409,
+                detail="Cannot create a project in an archived workspace",
+            )
+
         project = Project(
             title=payload.title,
             description=payload.description,
@@ -39,7 +45,7 @@ class ProjectService:
 
         return self.project_repo.create(project)
 
-    def list_workspace_projects(self, workspace_id: UUID):
+    def list_workspace_projects(self, workspace_id: UUID, limit: int | None = None, offset: int = 0):
         workspace = self.workspace_repo.get_by_id(workspace_id)
 
         if workspace is None:
@@ -48,12 +54,28 @@ class ProjectService:
                 detail="Workspace not found",
             )
 
-        return self.project_repo.get_workspace_projects(workspace_id)
+        if workspace.is_archived:
+            raise HTTPException(
+                status_code=404,
+                detail="Workspace not found",
+            )
+
+        return self.project_repo.get_workspace_projects(
+            workspace_id,
+            limit=limit,
+            offset=offset,
+        )
 
     def get_project(self, project_id: UUID):
         project = self.project_repo.get_by_id(project_id)
 
         if project is None:
+            raise HTTPException(
+                status_code=404,
+                detail="Project not found",
+            )
+
+        if project.status == ProjectStatus.ARCHIVED:
             raise HTTPException(
                 status_code=404,
                 detail="Project not found",
@@ -87,6 +109,12 @@ class ProjectService:
     ):
         project = self.get_project(project_id)
 
+        if project.status == ProjectStatus.ARCHIVED:
+            raise HTTPException(
+                status_code=409,
+                detail="Project is already archived",
+            )
+
         project.status = ProjectStatus.ARCHIVED
 
         return self.project_repo.update(project)
@@ -98,10 +126,17 @@ class ProjectService:
     ):
         project = self.get_project(project_id)
 
-        self.project_repo.delete(project)
+        if project.status == ProjectStatus.ARCHIVED:
+            raise HTTPException(
+                status_code=409,
+                detail="Project is already archived",
+            )
+
+        project.status = ProjectStatus.ARCHIVED
+        self.project_repo.update(project)
 
         return {
-            "message": "Project deleted successfully"
+            "message": "Project archived successfully"
         }
 
     def require_owner(

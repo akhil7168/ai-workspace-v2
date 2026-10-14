@@ -22,16 +22,23 @@ class WorkspaceRepository:
             .first()
         )
 
-    def get_user_workspaces(self, owner_id: UUID):
-        return (
+    def get_user_workspaces(self, owner_id: UUID, limit: int | None = None, offset: int = 0):
+        query = (
             self.db.query(Workspace)
             .filter(
                 Workspace.owner_id == owner_id,
-                Workspace.is_archived == False,
+                Workspace.is_archived.is_(False),
             )
             .order_by(Workspace.created_at.desc())
-            .all()
         )
+
+        if offset:
+            query = query.offset(offset)
+
+        if limit is not None:
+            query = query.limit(limit)
+
+        return query.all()
 
     def update(self, workspace: Workspace):
         self.db.commit()
