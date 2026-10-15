@@ -4,6 +4,7 @@ from sqlalchemy.orm import Session
 from fastapi import HTTPException  # type: ignore[reportMissingImports]
 
 from app.models.project import Project, ProjectStatus
+from app.models.project_member import ProjectMember, ProjectRole
 from app.repositories.project_repository import ProjectRepository
 from app.repositories.workspace_repository import WorkspaceRepository
 from app.schemas.project import ProjectCreate, ProjectUpdate
@@ -41,6 +42,13 @@ class ProjectService:
             workspace_id=workspace.id,
             created_by=current_user_id,
             status=ProjectStatus.ACTIVE,
+        )
+        project.memberships.append(
+            ProjectMember(
+                user_id=current_user_id,
+                role=ProjectRole.OWNER,
+                assigned_by=current_user_id,
+            )
         )
 
         return self.project_repo.create(project)

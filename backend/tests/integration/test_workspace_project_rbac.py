@@ -3,15 +3,10 @@ from uuid import uuid4
 
 import pytest
 from fastapi import HTTPException
-from fastapi.testclient import TestClient
 
 from app.core.auth import get_current_user
-from app.db.session import SessionLocal, get_db
 from app.main import app
-from app.models.project import Project
-from app.models.user import User
-from app.models.workspace import Workspace
-from app.models.workspace_member import WorkspaceMember, WorkspaceRole
+from app.models.workspace_member import WorkspaceRole
 from app.schemas.project import ProjectCreate
 from app.schemas.workspace import WorkspaceCreate
 from app.services.project_service import ProjectService
@@ -20,18 +15,12 @@ from app.services.workspace_service import WorkspaceService
 
 
 @pytest.fixture
-def rbac_data():
-    db = SessionLocal()
+def rbac_data(db_session, user_factory, client):
+    db = db_session
     users = {
-        name: User(
-            full_name=f"RBAC {name}",
-            email=f"{uuid4()}@example.com",
-            password_hash="not-used",
-        )
+        name: user_factory(full_name=f"RBAC {name}")
         for name in ("owner", "member", "viewer", "outsider")
     }
-    db.add_all(users.values())
-    db.commit()
 
     workspace = WorkspaceService(db).create_workspace(
         WorkspaceCreate(name="RBAC workspace"),
@@ -57,8 +46,6 @@ def rbac_data():
         users["owner"].id,
     )
 
-    app.dependency_overrides[get_db] = lambda: db
-
     def act_as(user_name: str):
         user_id = users[user_name].id
         app.dependency_overrides[get_current_user] = lambda: SimpleNamespace(
@@ -72,31 +59,12 @@ def rbac_data():
         "outsider_workspace": outsider_workspace,
         "project": project,
         "act_as": act_as,
-        "client": TestClient(app),
+        "client": client,
     }
-    yield data
-
-    app.dependency_overrides.pop(get_current_user, None)
-    app.dependency_overrides.pop(get_db, None)
-
-    db.query(Project).filter(
-        Project.workspace_id.in_(
-            [workspace.id, outsider_workspace.id]
-        )
-    ).delete(synchronize_session=False)
-    db.query(WorkspaceMember).filter(
-        WorkspaceMember.workspace_id.in_(
-            [workspace.id, outsider_workspace.id]
-        )
-    ).delete(synchronize_session=False)
-    db.query(Workspace).filter(
-        Workspace.id.in_([workspace.id, outsider_workspace.id])
-    ).delete(synchronize_session=False)
-    db.query(User).filter(
-        User.id.in_([user.id for user in users.values()])
-    ).delete(synchronize_session=False)
-    db.commit()
-    db.close()
+    try:
+        yield data
+    finally:
+        app.dependency_overrides.pop(get_current_user, None)
 
 
 @pytest.mark.parametrize("user_name", ["owner", "member"])
