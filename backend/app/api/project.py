@@ -17,6 +17,7 @@ from app.schemas.project import (
     ProjectUpdate,
     ProjectResponse,
 )
+from app.schemas.common import ErrorResponse, MessageResponse
 from app.services.project_service import ProjectService
 
 
@@ -29,6 +30,13 @@ router = APIRouter(
 @router.post(
     "/workspace/{workspace_id}",
     response_model=ProjectResponse,
+    summary="Create a project in a workspace",
+    description="Requires project:create on the workspace. The creator is initialized as ProjectRole.OWNER; that project role does not replace workspace-level authorization for project operations.",
+    responses={
+        401: {"model": ErrorResponse, "description": "Authentication credentials are invalid."},
+        403: {"model": ErrorResponse, "description": "The user's workspace role does not allow project creation."},
+        404: {"model": ErrorResponse, "description": "Workspace is missing or inaccessible."},
+    },
 )
 def create_project(
     workspace_id: UUID,
@@ -49,6 +57,13 @@ def create_project(
 @router.get(
     "/workspace/{workspace_id}",
     response_model=list[ProjectResponse],
+    summary="List projects in a workspace",
+    description="Requires project:view on the workspace. Supports limit (1-100) and offset pagination.",
+    responses={
+        401: {"model": ErrorResponse, "description": "Authentication credentials are invalid."},
+        403: {"model": ErrorResponse, "description": "The user's workspace role does not allow viewing projects."},
+        404: {"model": ErrorResponse, "description": "Workspace is missing, archived, or inaccessible."},
+    },
 )
 def list_projects(
     workspace_id: UUID,
@@ -70,6 +85,13 @@ def list_projects(
 @router.get(
     "/{project_id}",
     response_model=ProjectResponse,
+    summary="Get a project",
+    description="Requires workspace membership and project:view for the project's workspace. Archived or inaccessible projects are hidden.",
+    responses={
+        401: {"model": ErrorResponse, "description": "Authentication credentials are invalid."},
+        403: {"model": ErrorResponse, "description": "The user is not a workspace member or lacks project:view."},
+        404: {"model": ErrorResponse, "description": "Project is missing or archived."},
+    },
 )
 def get_project(
     project_id: UUID,
@@ -84,6 +106,13 @@ def get_project(
 @router.put(
     "/{project_id}",
     response_model=ProjectResponse,
+    summary="Update a project",
+    description="Requires project:update from the user's workspace role. Project status can be changed through this request.",
+    responses={
+        401: {"model": ErrorResponse, "description": "Authentication credentials are invalid."},
+        403: {"model": ErrorResponse, "description": "The user is not a workspace member or lacks project:update."},
+        404: {"model": ErrorResponse, "description": "Project is missing or archived."},
+    },
 )
 def update_project(
     project_id: UUID,
@@ -104,6 +133,13 @@ def update_project(
 @router.patch(
     "/{project_id}/archive",
     response_model=ProjectResponse,
+    summary="Archive a project",
+    description="Sets the project status to ARCHIVED; this is a soft deletion. Requires project:update from the workspace role.",
+    responses={
+        401: {"model": ErrorResponse, "description": "Authentication credentials are invalid."},
+        403: {"model": ErrorResponse, "description": "The user is not a workspace member or lacks project:update."},
+        404: {"model": ErrorResponse, "description": "Project is missing or already archived."},
+    },
 )
 def archive_project(
     project_id: UUID,
@@ -121,6 +157,14 @@ def archive_project(
 
 @router.delete(
     "/{project_id}",
+    response_model=MessageResponse,
+    summary="Archive a project",
+    description="Soft-deletes the project by setting status to ARCHIVED; it does not physically delete the record. Requires project:delete from the workspace role.",
+    responses={
+        401: {"model": ErrorResponse, "description": "Authentication credentials are invalid."},
+        403: {"model": ErrorResponse, "description": "The user is not a workspace member or lacks project:delete."},
+        404: {"model": ErrorResponse, "description": "Project is missing or archived."},
+    },
 )
 def delete_project(
     project_id: UUID,

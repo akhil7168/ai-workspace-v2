@@ -7,18 +7,17 @@ from app.api.workspace import router as workspace_router
 from app.api.project import router as project_router
 from app.api.membership import router as membership_router
 from app.api.project_member import router as project_member_router
+from app.schemas.common import MessageResponse
 
 app = FastAPI(
     title="AI Workspace V2 Backend",
     version="0.2.0",
     description="""
-Production-ready authentication backend.
+API for user authentication and workspace, project, and membership management.
 
 Features:
-- JWT Authentication
-- Refresh Tokens
-- Protected APIs
-- RBAC Authorization
+- JWT access tokens and rotating refresh tokens
+- Protected APIs with workspace and project role-based authorization
 """,
 )
 
@@ -31,7 +30,12 @@ app.include_router(project_member_router)
 app.include_router(membership_router)
 
 
-@app.get("/")
+@app.get(
+    "/",
+    response_model=MessageResponse,
+    summary="Check API availability",
+    description="Returns a simple message confirming that the API application is responding.",
+)
 def root():
     return {
         "message": "AI Workspace V2 Backend Running"

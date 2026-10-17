@@ -3,6 +3,7 @@ from fastapi.responses import JSONResponse  # type: ignore[import-not-found]
 from sqlalchemy import text  # type: ignore[import-not-found]
 
 from app.db.session import engine
+from app.schemas.common import HealthResponse
 
 
 router = APIRouter(
@@ -11,7 +12,18 @@ router = APIRouter(
 )
 
 
-@router.get("/")
+@router.get(
+    "/",
+    response_model=HealthResponse,
+    summary="Check API and database health",
+    description="Returns healthy when a simple database query succeeds, otherwise unhealthy.",
+    responses={
+        503: {
+            "model": HealthResponse,
+            "description": "The database check failed.",
+        },
+    },
+)
 def health_check():
     try:
         with engine.connect() as connection:

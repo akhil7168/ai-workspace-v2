@@ -1,5 +1,6 @@
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
+from pydantic import ValidationError
 from sqlalchemy.orm import Session
 
 from app.core.auth import get_current_active_user
@@ -7,6 +8,7 @@ from app.core.security import create_access_token
 from app.db.session import get_db
 from app.models.user import User
 from app.schemas.auth import RefreshTokenRequest, TokenResponse
+from app.schemas.common import ErrorResponse, LogoutAllResponse, MessageResponse
 from app.schemas.user import UserCreate, UserLogin, UserResponse
 from app.services.auth_service import AuthService
 from app.services.session_service import SessionService
@@ -14,7 +16,15 @@ from app.services.session_service import SessionService
 router = APIRouter(prefix="/auth", tags=["Authentication"])
 
 
-@router.post("/register", response_model=UserResponse)
+@router.post(
+    "/register",
+    response_model=UserResponse,
+    summary="Register a user",
+    description="Create an account. Registration is public and returns the public user profile.",
+    responses={
+        400: {"model": ErrorResponse, "description": "Email is already registered."},
+    },
+)
 def register(
     payload: UserCreate,
     db: Session = Depends(get_db),
@@ -22,7 +32,41 @@ def register(
     return AuthService(db).register(payload)
 
 
-@router.post("/login", response_model=TokenResponse)
+@router.post(
+    "/login",
+    response_model=TokenResponse,
+    summary="Log in",
+    description=(
+        "Authenticate with JSON email/password or form username/password "
+        "(email is also accepted as the form username)."
+    ),
+    openapi_extra={
+        "requestBody": {
+            "required": True,
+            "content": {
+                "application/json": {
+                    "schema": UserLogin.model_json_schema(),
+                },
+                "application/x-www-form-urlencoded": {
+                    "schema": {
+                        "type": "object",
+                        "properties": {
+                            "username": {"type": "string", "format": "email"},
+                            "email": {"type": "string", "format": "email"},
+                            "password": {"type": "string"},
+                        },
+                        "required": ["password"],
+                    },
+                },
+            },
+        },
+    },
+    responses={
+        400: {"model": ErrorResponse, "description": "Malformed JSON request."},
+        401: {"model": ErrorResponse, "description": "Email or password is invalid."},
+        422: {"model": ErrorResponse, "description": "Email and password are required or invalid."},
+    },
+)
 async def login(
     request: Request,
     db: Session = Depends(get_db),
@@ -40,7 +84,7 @@ async def login(
 
         try:
             payload = UserLogin(**data)
-        except Exception:
+        except ValidationError:
             raise HTTPException(
                 status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
                 detail="Email and password are required",
@@ -56,7 +100,13 @@ async def login(
                 detail="Email and password are required",
             )
 
-        payload = UserLogin(email=email, password=password)
+        try:
+            payload = UserLogin(email=email, password=password)
+        except ValidationError:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail="Email and password are required",
+            )
 
     return AuthService(db).login(
         payload,
@@ -65,7 +115,15 @@ async def login(
     )
 
 
-@router.post("/refresh", response_model=TokenResponse)
+@router.post(
+    "/refresh",
+    response_model=TokenResponse,
+    summary="Rotate refresh token",
+    description="Exchange a valid refresh token for a new access token and rotated refresh token.",
+    responses={
+        401: {"model": ErrorResponse, "description": "Refresh token is invalid, expired, or revoked."},
+    },
+)
 def refresh_token(
     payload: RefreshTokenRequest,
     db: Session = Depends(get_db),
@@ -87,7 +145,15 @@ def refresh_token(
     }
 
 
-@router.post("/logout")
+@router.post(
+    "/logout",
+    response_model=MessageResponse,
+    summary="Log out a session",
+    description="Revoke the session identified by the supplied refresh token; no bearer token is required.",
+    responses={
+        401: {"model": ErrorResponse, "description": "Refresh token is invalid or already revoked."},
+    },
+)
 def logout(
     payload: RefreshTokenRequest,
     db: Session = Depends(get_db),
@@ -103,7 +169,16 @@ def logout(
     return {"message": "Logged out successfully"}
 
 
-@router.post("/logout-all")
+@router.post(
+    "/logout-all",
+    response_model=LogoutAllResponse,
+    summary="Log out all sessions",
+    description="Revoke every active refresh-token session belonging to the authenticated user.",
+    responses={
+        401: {"model": ErrorResponse, "description": "Authentication credentials are invalid."},
+        403: {"model": ErrorResponse, "description": "The authenticated user is inactive."},
+    },
+)
 def logout_all(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
@@ -116,7 +191,15 @@ def logout_all(
     }
 
 
-@router.get("/me", response_model=UserResponse)
+@router.get(
+    "/me",
+    response_model=UserResponse,
+    summary="Get the authenticated user",
+    responses={
+        401: {"model": ErrorResponse, "description": "Authentication credentials are invalid."},
+        403: {"model": ErrorResponse, "description": "The authenticated user is inactive."},
+    },
+)
 def get_auth_me(
     current_user: User = Depends(get_current_active_user),
 ):

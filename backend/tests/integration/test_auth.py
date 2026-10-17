@@ -16,6 +16,30 @@ def test_invalid_login_is_rejected(client):
     assert response.json()["detail"] == "Invalid credentials"
 
 
+def test_invalid_form_login_is_rejected_with_validation_error(client):
+    response = client.post(
+        "/auth/login",
+        data={"username": "not-an-email", "password": "Password123"},
+    )
+
+    assert response.status_code == 422
+    assert response.json()["detail"] == "Email and password are required"
+
+
+def test_form_login_supports_oauth2_password_fields(client, authenticated_user):
+    account = authenticated_user()
+    response = client.post(
+        "/auth/login",
+        data={
+            "username": account["credentials"]["email"],
+            "password": account["credentials"]["password"],
+        },
+    )
+
+    assert response.status_code == 200
+    assert response.json()["token_type"] == "bearer"
+
+
 def test_registration_login_and_current_user(client, authenticated_user):
     account = authenticated_user()
 

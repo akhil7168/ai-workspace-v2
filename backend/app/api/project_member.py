@@ -12,6 +12,7 @@ from app.schemas.project_member import (
     ProjectMemberRoleUpdate,
     ProjectMemberResponse,
 )
+from app.schemas.common import ErrorResponse, MessageResponse
 from app.services.project_member_service import ProjectMemberService
 
 
@@ -24,6 +25,15 @@ router = APIRouter(
 @router.post(
     "/{project_id}/members",
     response_model=ProjectMemberResponse,
+    summary="Add a project member",
+    description="Requires the caller to belong to the workspace and project, with project OWNER or ADMIN role. The target user must already belong to the workspace.",
+    responses={
+        400: {"model": ErrorResponse, "description": "A second project OWNER cannot be created."},
+        401: {"model": ErrorResponse, "description": "Authentication credentials are invalid."},
+        403: {"model": ErrorResponse, "description": "The caller or target user lacks required workspace/project membership or permission."},
+        404: {"model": ErrorResponse, "description": "Project or target user is missing, archived, or inaccessible."},
+        409: {"model": ErrorResponse, "description": "The target user is already a project member."},
+    },
 )
 def add_project_member(
     project_id: UUID,
@@ -46,6 +56,13 @@ def add_project_member(
 @router.get(
     "/{project_id}/members",
     response_model=list[ProjectMemberResponse],
+    summary="List project members",
+    description="Requires workspace and project membership; project OWNER and ADMIN can manage members, and every project role can view them.",
+    responses={
+        401: {"model": ErrorResponse, "description": "Authentication credentials are invalid."},
+        403: {"model": ErrorResponse, "description": "Workspace or project membership is missing, or viewing is not permitted."},
+        404: {"model": ErrorResponse, "description": "Project is missing, archived, or inaccessible."},
+    },
 )
 def list_project_members(
     project_id: UUID,
@@ -65,6 +82,14 @@ def list_project_members(
 @router.patch(
     "/{project_id}/members/{user_id}",
     response_model=ProjectMemberResponse,
+    summary="Change a project member's role",
+    description="Requires project OWNER or ADMIN role. The existing project OWNER cannot be changed and a second OWNER cannot be created.",
+    responses={
+        400: {"model": ErrorResponse, "description": "A second project OWNER cannot be created."},
+        401: {"model": ErrorResponse, "description": "Authentication credentials are invalid."},
+        403: {"model": ErrorResponse, "description": "Workspace/project membership or role-change permission is missing; the OWNER role cannot be changed."},
+        404: {"model": ErrorResponse, "description": "Project or target project member is missing, archived, or inaccessible."},
+    },
 )
 def update_project_member_role(
     project_id: UUID,
@@ -87,6 +112,14 @@ def update_project_member_role(
 
 @router.delete(
     "/{project_id}/members/{user_id}",
+    response_model=MessageResponse,
+    summary="Remove a project member",
+    description="Requires project OWNER or ADMIN role. The project OWNER cannot be removed.",
+    responses={
+        401: {"model": ErrorResponse, "description": "Authentication credentials are invalid."},
+        403: {"model": ErrorResponse, "description": "Workspace/project membership or removal permission is missing, or the target is the project OWNER."},
+        404: {"model": ErrorResponse, "description": "Project or target project member is missing, archived, or inaccessible."},
+    },
 )
 def remove_project_member(
     project_id: UUID,
