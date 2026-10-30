@@ -1,6 +1,6 @@
 from uuid import UUID
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Body, Depends
 from sqlalchemy.orm import Session
 
 from app.core.auth import get_current_active_user
@@ -36,6 +36,30 @@ def connect_repository(
     _permission=Depends(require_project_permission(Permission.PROJECT_UPDATE)),
 ):
     return RepositoryIngestionService(db).connect_repository(project_id, payload.url)
+
+
+@router.post(
+    "/{project_id}/repositories/{repository_id}/reindex",
+    response_model=RepositoryResponse,
+    summary="Re-index a connected public GitHub repository",
+    description="Requires project:update. Re-clones and atomically replaces repository file and code-chunk metadata.",
+    responses={
+        401: {"model": ErrorResponse, "description": "Authentication is invalid."},
+        403: {"model": ErrorResponse, "description": "The user lacks project:update permission."},
+        404: {"model": ErrorResponse, "description": "Project or repository is missing."},
+        422: {"model": ErrorResponse, "description": "Repository is unavailable or limits are invalid."},
+        502: {"model": ErrorResponse, "description": "Repository clone failed."},
+    },
+)
+def reindex_repository(
+    project_id: UUID,
+    repository_id: UUID,
+    payload: dict = Body(default={}),
+    current_user=Depends(get_current_active_user),
+    db: Session = Depends(get_db),
+    _permission=Depends(require_project_permission(Permission.PROJECT_UPDATE)),
+):
+    return RepositoryIngestionService(db).reindex_repository(project_id, repository_id)
 
 
 @router.get(

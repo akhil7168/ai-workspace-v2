@@ -19,6 +19,12 @@ class RepositoryRepository:
             Repository.project_id == project_id
         ).order_by(Repository.created_at.desc()).all()
 
+    def get_by_project_and_id(self, project_id: UUID, repository_id: UUID) -> Repository | None:
+        return self.db.query(Repository).filter(
+            Repository.project_id == project_id,
+            Repository.id == repository_id,
+        ).first()
+
     def create(self, repository: Repository) -> Repository:
         self.db.add(repository)
         self.db.commit()

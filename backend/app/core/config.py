@@ -20,6 +20,7 @@ class Settings(BaseSettings):
     REPOSITORY_MAX_FILES: int = 20_000
     REPOSITORY_MAX_TOTAL_BYTES: int = 100_000_000
     REPOSITORY_MAX_PROCESSING_SECONDS: int = 120
+    CODE_CHUNK_MAX_CHARS: int = 8000
 
     model_config = SettingsConfigDict(
         env_file=".env",

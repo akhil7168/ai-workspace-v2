@@ -3,6 +3,9 @@ import re
 import shutil
 import subprocess
 import tempfile
+import json
+import urllib.error
+import urllib.request
 from dataclasses import dataclass
 from pathlib import Path
 from urllib.parse import urlparse
@@ -49,15 +52,56 @@ def validate_github_url(url: str) -> tuple[str, str, str]:
 normalize_github_repository_url = validate_github_url
 
 
+class GitHubPublicRepositoryVerifier:
+    def __init__(self, timeout_seconds: int = 15):
+        self.timeout_seconds = timeout_seconds
+
+    def verify(self, owner: str, name: str) -> None:
+        class NoRedirectHandler(urllib.request.HTTPRedirectHandler):
+            def redirect_request(self, req, fp, code, msg, headers, newurl):
+                raise urllib.error.HTTPError(newurl, code, "Redirects are not allowed", headers, fp)
+
+        request = urllib.request.Request(
+            f"https://api.github.com/repos/{owner}/{name}",
+            headers={"Accept": "application/vnd.github+json", "User-Agent": "ai-workspace-ingestion"},
+            method="GET",
+        )
+        opener = urllib.request.build_opener(NoRedirectHandler())
+        try:
+            with opener.open(request, timeout=self.timeout_seconds) as response:
+                if response.status != 200:
+                    raise RepositoryValidationError("GitHub repository is not publicly accessible")
+                payload = json.loads(response.read().decode("utf-8"))
+        except (urllib.error.HTTPError, urllib.error.URLError, TimeoutError, json.JSONDecodeError, UnicodeDecodeError) as exc:
+            raise RepositoryValidationError("GitHub repository is not publicly accessible") from exc
+
+        if payload.get("private") is True or payload.get("archived") is True or payload.get("visibility") not in {None, "public"}:
+            raise RepositoryValidationError("Only public, active GitHub repositories are supported")
+
+
 class GitHubCloneAdapter:
     def __init__(self, timeout_seconds: int = 120): self.timeout_seconds = timeout_seconds
 
     def clone(self, url: str, destination: str):
+        env = os.environ.copy()
+        for key in list(env):
+            if key.upper().startswith("GIT_") or key.upper() in {"SSH_ASKPASS", "GIT_ASKPASS", "GCM_INTERACTIVE"}:
+                env.pop(key, None)
+        env.update({
+            "GIT_TERMINAL_PROMPT": "0",
+            "GCM_INTERACTIVE": "Never",
+            "GIT_ASKPASS": os.devnull,
+            "SSH_ASKPASS": os.devnull,
+            "GIT_CONFIG_NOSYSTEM": "1",
+            "GIT_CONFIG_GLOBAL": os.devnull,
+        })
         try:
             completed = subprocess.run([
-                "git", "-c", "http.followRedirects=false", "clone",
-                "--depth", "1", "--single-branch", "--no-tags", url, destination,
-            ], capture_output=True, timeout=self.timeout_seconds, check=False, shell=False)
+                "git", "-c", "http.followRedirects=false",
+                "-c", "credential.helper=",
+                "-c", "core.askPass=false",
+                "clone", "--depth", "1", "--single-branch", "--no-tags", url, destination,
+            ], capture_output=True, timeout=self.timeout_seconds, check=False, shell=False, env=env)
         except FileNotFoundError as exc:
             raise RepositoryCloneError("Git is not installed or is not available") from exc
         except subprocess.TimeoutExpired as exc:
@@ -111,12 +155,24 @@ class RepositoryFileScanner:
 
     @staticmethod
     def is_excluded_file(relative_path: str) -> bool:
-        import re
         name = Path(relative_path).name.lower()
-        if name == ".env" or (name.startswith(".env.") and name not in (".env.example", ".env.sample")): return True
-        if name in {"id_rsa", "id_dsa", "id_ed25519", "id_ecdsa", "private.key", "server.key", "credentials.json", "secrets.json"}: return True
         lower = relative_path.lower().replace("\\", "/")
-        return lower.endswith((".pem", ".key", ".p12", ".pfx", ".crt")) or "/.github/credentials" in lower
+        safe_examples = {".env.example", ".env.sample", ".env.template", "env.example", "env.sample"}
+        if name in safe_examples:
+            return False
+        if name in {".env", ".npmrc", "production.env", "credentials.json", "secrets.json", "id_rsa", "id_dsa", "id_ed25519", "id_ecdsa", "private.key", "server.key"}:
+            return True
+        if name.startswith(".env.") or name.endswith(".env"):
+            return True
+        if lower == ".aws/credentials" or lower.startswith(".aws/") and name in {"credentials", "config"}:
+            return True
+        if name.endswith((".tfstate", ".tfstate.backup")):
+            return True
+        if "service-account" in name and name.endswith(".json"):
+            return True
+        if name.endswith((".pem", ".key", ".p12", ".pfx", ".crt", ".keystore", ".jks")):
+            return True
+        return lower.endswith("/credentials") or lower.endswith("/secrets") or "/.github/credentials" in lower
 
     def scan(self, root: str) -> list[FileMetadata]:
         import hashlib, time

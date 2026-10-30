@@ -2,7 +2,7 @@ import enum
 import uuid
 from datetime import datetime
 
-from sqlalchemy import Column, DateTime, Enum, ForeignKey, Integer, String, Text, Uuid, UniqueConstraint
+from sqlalchemy import Column, DateTime, Enum, ForeignKey, Integer, String, Text, Uuid, UniqueConstraint, Index
 from sqlalchemy.orm import relationship
 
 from app.db.base_class import Base
@@ -55,3 +55,27 @@ class RepositoryFile(Base):
     updated_at = Column(DateTime(timezone=True), default=lambda: datetime.now(), onupdate=lambda: datetime.now(), nullable=False)
 
     repository = relationship("Repository", back_populates="files")
+    chunks = relationship("CodeChunk", back_populates="file", cascade="all, delete-orphan")
+
+
+class CodeChunk(Base):
+    __tablename__ = "code_chunks"
+    __table_args__ = (
+        UniqueConstraint("file_id", "chunk_index", name="uq_code_chunk_file_index"),
+        Index("ix_code_chunks_file_id_chunk_index", "file_id", "chunk_index"),
+    )
+
+    id = Column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4, nullable=False)
+    file_id = Column(Uuid(as_uuid=True), ForeignKey("repository_files.id", ondelete="CASCADE"), nullable=False, index=True)
+    symbol = Column(String(255), nullable=False)
+    symbol_type = Column(String(50), nullable=False)
+    parent_symbol = Column(String(255), nullable=True)
+    start_line = Column(Integer, nullable=False)
+    end_line = Column(Integer, nullable=False)
+    content = Column(Text, nullable=False)
+    language = Column(String(50), nullable=False)
+    chunk_index = Column(Integer, nullable=False)
+    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(), nullable=False)
+    updated_at = Column(DateTime(timezone=True), default=lambda: datetime.now(), onupdate=lambda: datetime.now(), nullable=False)
+
+    file = relationship("RepositoryFile", back_populates="chunks")
