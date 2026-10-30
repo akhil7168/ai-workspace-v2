@@ -7,17 +7,19 @@ from app.api.workspace import router as workspace_router
 from app.api.project import router as project_router
 from app.api.membership import router as membership_router
 from app.api.project_member import router as project_member_router
+from app.api.repository import router as repository_router
 from app.schemas.common import MessageResponse
 
 app = FastAPI(
     title="AI Workspace V2 Backend",
     version="0.2.0",
     description="""
-API for user authentication and workspace, project, and membership management.
+API for authentication, workspace/project management, and secure public GitHub repository ingestion.
 
 Features:
 - JWT access tokens and rotating refresh tokens
 - Protected APIs with workspace and project role-based authorization
+- Project-scoped public GitHub repository metadata ingestion
 """,
 )
 
@@ -28,6 +30,7 @@ app.include_router(workspace_router)
 app.include_router(project_router)
 app.include_router(project_member_router)
 app.include_router(membership_router)
+app.include_router(repository_router)
 
 
 @app.get(
