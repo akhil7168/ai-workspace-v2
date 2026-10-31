@@ -13,6 +13,7 @@ from app.ingestion.parser import parse_source
 from app.ingestion.chunker import generate_chunks
 from app.repositories.repository_repository import RepositoryRepository
 from app.services.project_service import ProjectService
+from app.services.embedding_service import EmbeddingService
 from app.utils.repository_ingestion import (
     GitHubCloneAdapter,
     RepositoryCloneError,
@@ -39,6 +40,33 @@ class RepositoryIngestionService:
             max_total_bytes=settings.REPOSITORY_MAX_TOTAL_BYTES,
             max_processing_seconds=settings.REPOSITORY_MAX_PROCESSING_SECONDS,
         )
+
+    def _generate_embeddings(self, repository: Repository, fallback_message: str | None = None):
+        if not settings.EMBEDDING_AUTO_GENERATE:
+            return
+        try:
+            summary = EmbeddingService(self.db).generate_repository_embeddings(
+                repository.project_id,
+                repository.id,
+            )
+            messages = []
+            if fallback_message:
+                messages.append(fallback_message)
+            if summary["failed"]:
+                messages.append(
+                    f"Embedding generation completed with {summary['failed']} failed chunk(s); retry via the embeddings endpoint"
+                )
+            repository.error_message = "; ".join(messages) if messages else None
+            self.db.commit()
+        except Exception as exc:
+            self.db.rollback()
+            repository.status = RepositoryStatus.COMPLETED
+            messages = []
+            if fallback_message:
+                messages.append(fallback_message)
+            messages.append("Embedding generation could not start; retry via the embeddings endpoint")
+            repository.error_message = "; ".join(messages)
+            self.db.commit()
 
     def list_repositories(self, project_id: UUID):
         project = ProjectService(self.db).get_project(project_id)
@@ -143,6 +171,10 @@ class RepositoryIngestionService:
             repository.indexed_at = datetime.now(timezone.utc)
             self.db.commit()
             self.db.refresh(repository)
+            self._generate_embeddings(
+                repository,
+                f"Fallback parsing used for {fallback_file_count} file(s)" if fallback_file_count else None,
+            )
             return repository
         except Exception:
             self.db.rollback()
@@ -255,6 +287,10 @@ class RepositoryIngestionService:
                 repository.error_message = f"Fallback parsing used for {fallback_file_count} file(s)"
             self.db.commit()
             self.db.refresh(repository)
+            self._generate_embeddings(
+                repository,
+                repository.error_message,
+            )
             return repository
         except RepositoryLimitError as exc:
             repository.status = RepositoryStatus.FAILED

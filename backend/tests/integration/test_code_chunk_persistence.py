@@ -20,3 +20,7 @@ def test_code_chunk_model_relationship_and_transaction_fixture(db_session):
     stored = db_session.query(RepositoryFile).filter_by(path="main.py").one()
     assert len(stored.chunks) == 1
     assert stored.chunks[0].symbol == "main"
+    assert stored.chunks[0].embedding is None
+    assert stored.chunks[0].embedding_status is None
+    assert stored.chunks[0].embedding_model is None
+    assert stored.chunks[0].embedded_at is None

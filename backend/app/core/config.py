@@ -21,6 +21,11 @@ class Settings(BaseSettings):
     REPOSITORY_MAX_TOTAL_BYTES: int = 100_000_000
     REPOSITORY_MAX_PROCESSING_SECONDS: int = 120
     CODE_CHUNK_MAX_CHARS: int = 8000
+    EMBEDDING_MODEL_NAME: str = "sentence-transformers/all-MiniLM-L6-v2"
+    EMBEDDING_DIMENSION: int = 384
+    EMBEDDING_BATCH_SIZE: int = 32
+    EMBEDDING_DEVICE: str = "cpu"
+    EMBEDDING_AUTO_GENERATE: bool = True
 
     model_config = SettingsConfigDict(
         env_file=".env",

@@ -8,8 +8,9 @@ from app.core.authorization import require_project_permission
 from app.core.permissions import Permission
 from app.db.session import get_db
 from app.schemas.common import ErrorResponse
-from app.schemas.repository import RepositoryConnect, RepositoryResponse
+from app.schemas.repository import EmbeddingResponse, RepositoryConnect, RepositoryResponse
 from app.services.repository_ingestion_service import RepositoryIngestionService
+from app.services.embedding_service import EmbeddingService
 
 router = APIRouter(prefix="/projects", tags=["Repositories"])
 
@@ -80,3 +81,25 @@ def list_repositories(
     _permission=Depends(require_project_permission(Permission.PROJECT_VIEW)),
 ):
     return RepositoryIngestionService(db).list_repositories(project_id)
+
+
+@router.post(
+    "/{project_id}/repositories/{repository_id}/embeddings",
+    response_model=EmbeddingResponse,
+    summary="Generate or retry repository code embeddings",
+    description="Requires project:update. Synchronously embeds missing or outdated chunks and never returns source contents or raw vectors.",
+    responses={
+        401: {"model": ErrorResponse, "description": "Authentication is invalid."},
+        403: {"model": ErrorResponse, "description": "The user lacks project:update permission."},
+        404: {"model": ErrorResponse, "description": "Project or repository is missing."},
+    },
+)
+def generate_repository_embeddings(
+    project_id: UUID,
+    repository_id: UUID,
+    payload: dict = Body(default={}),
+    current_user=Depends(get_current_active_user),
+    db: Session = Depends(get_db),
+    _permission=Depends(require_project_permission(Permission.PROJECT_UPDATE)),
+):
+    return EmbeddingService(db).generate_repository_embeddings(project_id, repository_id)

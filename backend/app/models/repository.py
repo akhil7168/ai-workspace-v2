@@ -1,11 +1,44 @@
 import enum
 import uuid
+import json
 from datetime import datetime
 
 from sqlalchemy import Column, DateTime, Enum, ForeignKey, Integer, String, Text, Uuid, UniqueConstraint, Index
 from sqlalchemy.orm import relationship
+from sqlalchemy.types import TypeDecorator
 
 from app.db.base_class import Base
+
+
+class EmbeddingVector(TypeDecorator):
+    """Use pgvector on PostgreSQL and a JSON-compatible column for SQLite tests."""
+
+    impl = Text
+    cache_ok = True
+
+    def __init__(self, dimensions=384):
+        super().__init__()
+        self.dimensions = dimensions
+
+    def load_dialect_impl(self, dialect):
+        if dialect.name == "postgresql":
+            from pgvector.sqlalchemy import Vector
+            return dialect.type_descriptor(Vector(self.dimensions))
+        return dialect.type_descriptor(Text())
+
+    def process_bind_param(self, value, dialect):
+        if value is None:
+            return None
+        if dialect.name == "postgresql":
+            return value
+        return json.dumps(value)
+
+    def process_result_value(self, value, dialect):
+        if value is None:
+            return None
+        if dialect.name == "sqlite" and isinstance(value, str):
+            return json.loads(value)
+        return value
 
 
 class RepositoryStatus(str, enum.Enum):
@@ -75,6 +108,10 @@ class CodeChunk(Base):
     content = Column(Text, nullable=False)
     language = Column(String(50), nullable=False)
     chunk_index = Column(Integer, nullable=False)
+    embedding = Column(EmbeddingVector(384), nullable=True)
+    embedding_model = Column(String(255), nullable=True)
+    embedding_status = Column(String(20), nullable=True)
+    embedded_at = Column(DateTime(timezone=True), nullable=True)
     created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(), nullable=False)
     updated_at = Column(DateTime(timezone=True), default=lambda: datetime.now(), onupdate=lambda: datetime.now(), nullable=False)
 

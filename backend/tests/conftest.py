@@ -14,6 +14,12 @@ from app.main import app
 from app.models.user import User
 
 
+@pytest.fixture(autouse=True)
+def disable_auto_embeddings(monkeypatch):
+    from app.core.config import settings
+    monkeypatch.setattr(settings, "EMBEDDING_AUTO_GENERATE", False)
+
+
 @pytest.fixture
 def db_session():
     engine = create_engine(

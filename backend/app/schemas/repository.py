@@ -39,3 +39,11 @@ class RepositoryResponse(BaseModel):
     updated_at: datetime
     indexed_at: Optional[datetime] = None
     error_message: Optional[str] = None
+
+
+class EmbeddingResponse(BaseModel):
+    total_chunks: int
+    already_embedded: int
+    newly_embedded: int
+    failed: int
+    model_name: str
