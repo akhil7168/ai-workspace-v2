@@ -178,3 +178,68 @@ def test_repository_route_authorization(monkeypatch, client, authenticated_user)
     assert denied_reindex.status_code == 403
     listed = client.get(f"/projects/{project['id']}/repositories", headers=viewer["headers"])
     assert listed.status_code == 200
+
+
+def test_semantic_search_route_requires_pgvector(client, authenticated_user):
+    owner = authenticated_user()
+    _, project = create_workspace_project(client, owner, "Search project")
+
+    response = client.post(
+        f"/projects/{project['id']}/search",
+        headers=owner["headers"],
+        json={"query": "find the authentication handler", "limit": 3},
+    )
+    assert response.status_code == 501
+    assert "PostgreSQL with pgvector" in response.json()["detail"]
+
+
+def test_semantic_search_route_validates_query_and_limit(client, authenticated_user):
+    owner = authenticated_user()
+    _, project = create_workspace_project(client, owner, "Search validation project")
+
+    empty = client.post(
+        f"/projects/{project['id']}/search",
+        headers=owner["headers"],
+        json={"query": "   ", "limit": 5},
+    )
+    assert empty.status_code == 422
+
+    excessive_limit = client.post(
+        f"/projects/{project['id']}/search",
+        headers=owner["headers"],
+        json={"query": "authentication", "limit": 21},
+    )
+    assert excessive_limit.status_code == 422
+
+
+def test_semantic_search_route_allows_project_viewer(client, authenticated_user):
+    owner = authenticated_user()
+    workspace, project = create_workspace_project(client, owner, "Viewer search project")
+    viewer = authenticated_user()
+    added = client.post(
+        f"/memberships/{workspace['id']}",
+        headers=owner["headers"],
+        json={"user_id": viewer["user"]["id"], "role": "VIEWER"},
+    )
+    assert added.status_code == 201
+
+    response = client.post(
+        f"/projects/{project['id']}/search",
+        headers=viewer["headers"],
+        json={"query": "authentication", "limit": 5},
+    )
+    assert response.status_code == 501
+    assert "PostgreSQL with pgvector" in response.json()["detail"]
+
+
+def test_semantic_search_route_denies_workspace_non_member(client, authenticated_user):
+    owner = authenticated_user()
+    _, project = create_workspace_project(client, owner, "Private search project")
+    outsider = authenticated_user()
+
+    response = client.post(
+        f"/projects/{project['id']}/search",
+        headers=outsider["headers"],
+        json={"query": "authentication", "limit": 5},
+    )
+    assert response.status_code == 403

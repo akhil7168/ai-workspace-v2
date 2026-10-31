@@ -39,6 +39,8 @@ class Project(Base):
         default=ProjectStatus.ACTIVE
     )
 
+    visibility = Column(String(20), nullable=False, default="PRIVATE")
+
     workspace_id = Column(
         Uuid(as_uuid=True),
         ForeignKey("workspaces.id", ondelete="CASCADE"),

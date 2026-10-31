@@ -42,6 +42,7 @@ class ProjectService:
             workspace_id=workspace.id,
             created_by=current_user_id,
             status=ProjectStatus.ACTIVE,
+            visibility="PRIVATE",
         )
         project.memberships.append(
             ProjectMember(

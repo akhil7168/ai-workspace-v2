@@ -8,9 +8,16 @@ from app.core.authorization import require_project_permission
 from app.core.permissions import Permission
 from app.db.session import get_db
 from app.schemas.common import ErrorResponse
-from app.schemas.repository import EmbeddingResponse, RepositoryConnect, RepositoryResponse
+from app.schemas.repository import (
+    EmbeddingResponse,
+    RepositoryConnect,
+    RepositoryResponse,
+    SemanticSearchRequest,
+    SemanticSearchResponse,
+)
 from app.services.repository_ingestion_service import RepositoryIngestionService
 from app.services.embedding_service import EmbeddingService
+from app.services.semantic_search_service import SemanticSearchService
 
 router = APIRouter(prefix="/projects", tags=["Repositories"])
 
@@ -103,3 +110,27 @@ def generate_repository_embeddings(
     _permission=Depends(require_project_permission(Permission.PROJECT_UPDATE)),
 ):
     return EmbeddingService(db).generate_repository_embeddings(project_id, repository_id)
+
+
+@router.post(
+    "/{project_id}/search",
+    response_model=SemanticSearchResponse,
+    summary="Search project code semantically",
+    description="Requires project:view. Searches current-model completed pgvector embeddings with cosine distance and returns project-scoped code snippets.",
+    responses={
+        401: {"model": ErrorResponse, "description": "Authentication is invalid."},
+        403: {"model": ErrorResponse, "description": "The user lacks project:view permission."},
+        404: {"model": ErrorResponse, "description": "Project is missing or archived."},
+        422: {"model": ErrorResponse, "description": "Search query or limit is invalid."},
+        501: {"model": ErrorResponse, "description": "Semantic search requires PostgreSQL with pgvector."},
+        502: {"model": ErrorResponse, "description": "Embedding generation failed."},
+    },
+)
+def search_project_code(
+    project_id: UUID,
+    payload: SemanticSearchRequest,
+    current_user=Depends(get_current_active_user),
+    db: Session = Depends(get_db),
+    _permission=Depends(require_project_permission(Permission.PROJECT_VIEW)),
+):
+    return SemanticSearchService(db).search(project_id, payload.query, payload.limit)

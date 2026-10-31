@@ -2,7 +2,7 @@ from datetime import datetime
 from typing import Optional
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from app.models.repository import RepositoryStatus
 
@@ -47,3 +47,36 @@ class EmbeddingResponse(BaseModel):
     newly_embedded: int
     failed: int
     model_name: str
+
+
+class SemanticSearchRequest(BaseModel):
+    query: str = Field(..., min_length=1, max_length=4000)
+    limit: int = Field(default=5, ge=1, le=20)
+
+    @field_validator("query")
+    @classmethod
+    def validate_query(cls, value: str) -> str:
+        value = value.strip()
+        if not value:
+            raise ValueError("Query must not be empty")
+        return value
+
+
+class SemanticSearchResult(BaseModel):
+    chunk_id: UUID
+    repository_id: UUID
+    file_path: str
+    symbol: str
+    symbol_type: str
+    start_line: int
+    end_line: int
+    language: str
+    similarity: float
+    snippet: str
+
+
+class SemanticSearchResponse(BaseModel):
+    query: str
+    model_name: str
+    total: int
+    results: list[SemanticSearchResult]
