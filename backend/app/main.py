@@ -20,6 +20,8 @@ Features:
 - JWT access tokens and rotating refresh tokens
 - Protected APIs with workspace and project role-based authorization
 - Project-scoped public GitHub repository metadata ingestion
+- Semantic search and grounded RAG answers
+- Stateless project assistant chat reuse of the RAG pipeline
 """,
 )
 

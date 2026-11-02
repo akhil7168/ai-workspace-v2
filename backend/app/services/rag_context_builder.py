@@ -52,6 +52,7 @@ class RAGContextBuilder:
                 "code_truncated": len(content) > content_budget,
             }
             block = json.dumps(entry, ensure_ascii=True, separators=(",", ":"))
+            block = block.replace("<", "\\u003c").replace(">", "\\u003e").replace("&", "\\u0026")
             if len(block) > remaining:
                 break
             blocks.append(block)

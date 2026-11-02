@@ -9,6 +9,8 @@ from app.core.permissions import Permission
 from app.db.session import get_db
 from app.schemas.common import ErrorResponse
 from app.schemas.repository import (
+    AssistantChatRequest,
+    AssistantChatResponse,
     EmbeddingResponse,
     RepositoryConnect,
     RepositoryResponse,
@@ -164,3 +166,42 @@ def ask_project_code(
     _permission=Depends(require_project_permission(Permission.PROJECT_VIEW)),
 ):
     return RAGService(db).ask(project_id, payload.question, payload.limit)
+
+
+@router.post(
+    "/{project_id}/assistant/chat",
+    response_model=AssistantChatResponse,
+    summary="Chat with the grounded project assistant",
+    description="Requires project:view. Sends the message through the existing Day 13 RAG service and returns the grounded answer with application-owned source locations.",
+    responses={
+        401: {"model": ErrorResponse, "description": "Authentication is invalid."},
+        403: {"model": ErrorResponse, "description": "The user lacks project:view permission."},
+        404: {"model": ErrorResponse, "description": "Project is missing or archived."},
+        422: {"model": ErrorResponse, "description": "Message or request payload is invalid."},
+        429: {"model": ErrorResponse, "description": "The LLM provider rate limit was exceeded."},
+        501: {"model": ErrorResponse, "description": "Semantic search requires PostgreSQL with pgvector."},
+        502: {"model": ErrorResponse, "description": "Embedding or LLM output failed validation."},
+        503: {"model": ErrorResponse, "description": "The LLM provider is not configured."},
+        504: {"model": ErrorResponse, "description": "The LLM provider timed out."},
+    },
+)
+def assistant_chat(
+    project_id: UUID,
+    payload: AssistantChatRequest,
+    current_user=Depends(get_current_active_user),
+    db: Session = Depends(get_db),
+    _permission=Depends(require_project_permission(Permission.PROJECT_VIEW)),
+):
+    rag_response = RAGService(db).ask(project_id, payload.message, 5)
+    sources = [
+        {
+            "file": source["file_path"],
+            "start_line": source["start_line"],
+            "end_line": source["end_line"],
+        }
+        for source in rag_response["sources"]
+    ]
+    return {
+        "answer": rag_response["answer"],
+        "sources": sources,
+    }

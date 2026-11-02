@@ -54,11 +54,13 @@ class OpenAICompatibleLLMProvider:
         if self.timeout_seconds < 1:
             raise LLMConfigurationError("LLM timeout must be at least one second")
 
-        if "SOURCE DATA" in prompt:
-            system_prompt, user_prompt = prompt.split("SOURCE DATA", 1)
+        if "SOURCE DATA" in prompt and "USER QUESTION" in prompt:
+            system_prompt, remainder = prompt.split("SOURCE DATA", 1)
+            source_prompt, question_prompt = remainder.split("USER QUESTION", 1)
             messages = [
                 {"role": "system", "content": system_prompt.strip()},
-                {"role": "user", "content": "SOURCE DATA" + user_prompt},
+                {"role": "user", "content": "SOURCE DATA" + source_prompt.strip()},
+                {"role": "user", "content": "USER QUESTION" + question_prompt.strip()},
             ]
         else:
             messages = [{"role": "user", "content": prompt}]
@@ -68,7 +70,7 @@ class OpenAICompatibleLLMProvider:
                 response = client.post(
                     f"{self.base_url}/chat/completions",
                     headers={
-                        "Authorization": f"Bearer {self.api_key}",
+                        "Authorization": "Bearer " + self.api_key,
                         "Content-Type": "application/json",
                     },
                     json={

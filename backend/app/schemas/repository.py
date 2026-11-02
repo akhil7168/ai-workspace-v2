@@ -110,3 +110,26 @@ class RAGAskResponse(BaseModel):
     sources: list[RAGSource]
     retrieval_count: int
     model_name: str
+
+
+class AssistantChatRequest(BaseModel):
+    message: str = Field(..., min_length=1, max_length=4000)
+
+    @field_validator("message")
+    @classmethod
+    def validate_message(cls, value: str) -> str:
+        value = value.strip()
+        if not value:
+            raise ValueError("Message must not be empty")
+        return value
+
+
+class AssistantSource(BaseModel):
+    file: str
+    start_line: int
+    end_line: int
+
+
+class AssistantChatResponse(BaseModel):
+    answer: str
+    sources: list[AssistantSource]

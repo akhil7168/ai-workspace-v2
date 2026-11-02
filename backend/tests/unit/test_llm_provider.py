@@ -89,6 +89,8 @@ def test_llm_provider_sends_grounding_prompt_as_system_and_user_messages(monkeyp
             assert messages[0]["role"] == "system"
             assert messages[1]["role"] == "user"
             assert "SOURCE DATA" in messages[1]["content"]
+            assert messages[2]["role"] == "user"
+            assert "USER QUESTION" in messages[2]["content"]
             return httpx.Response(
                 200,
                 json={"choices": [{"message": {"content": '{"answer_type":"insufficient_evidence","claims":[]}'}}]},
@@ -118,6 +120,7 @@ def test_llm_provider_success(monkeypatch):
             return False
         def post(self, *args, **kwargs):
             assert kwargs["json"]["response_format"] == {"type": "json_object"}
+            assert kwargs["headers"]["Authorization"] == "Bearer test-key"
             return httpx.Response(
                 200,
                 json={"choices": [{"message": {"content": '{"answer_type":"answer","claims":[{"text":"Grounded answer","citation_ids":[1]}]}'}}]},
