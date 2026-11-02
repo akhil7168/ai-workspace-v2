@@ -80,3 +80,33 @@ class SemanticSearchResponse(BaseModel):
     model_name: str
     total: int
     results: list[SemanticSearchResult]
+
+
+class RAGAskRequest(BaseModel):
+    question: str = Field(..., min_length=1, max_length=4000)
+    limit: int = Field(default=5, ge=1, le=20)
+
+    @field_validator("question")
+    @classmethod
+    def validate_question(cls, value: str) -> str:
+        value = value.strip()
+        if not value:
+            raise ValueError("Question must not be empty")
+        return value
+
+
+class RAGSource(BaseModel):
+    id: int
+    file_path: str
+    symbol: Optional[str] = None
+    start_line: int
+    end_line: int
+    chunk_id: UUID
+    similarity: Optional[float] = None
+
+
+class RAGAskResponse(BaseModel):
+    answer: str
+    sources: list[RAGSource]
+    retrieval_count: int
+    model_name: str

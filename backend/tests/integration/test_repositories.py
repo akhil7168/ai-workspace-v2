@@ -243,3 +243,55 @@ def test_semantic_search_route_denies_workspace_non_member(client, authenticated
         json={"query": "authentication", "limit": 5},
     )
     assert response.status_code == 403
+
+
+def test_rag_route_validates_question_and_limit(client, authenticated_user):
+    owner = authenticated_user()
+    _, project = create_workspace_project(client, owner, "RAG validation project")
+
+    empty = client.post(
+        f"/projects/{project['id']}/ask",
+        headers=owner["headers"],
+        json={"question": "   ", "limit": 5},
+    )
+    assert empty.status_code == 422
+
+    excessive_limit = client.post(
+        f"/projects/{project['id']}/ask",
+        headers=owner["headers"],
+        json={"question": "authentication", "limit": 21},
+    )
+    assert excessive_limit.status_code == 422
+
+    oversized = client.post(
+        f"/projects/{project['id']}/ask",
+        headers=owner["headers"],
+        json={"question": "x" * 4001, "limit": 5},
+    )
+    assert oversized.status_code == 422
+
+
+def test_rag_route_requires_pgvector(client, authenticated_user):
+    owner = authenticated_user()
+    _, project = create_workspace_project(client, owner, "RAG search project")
+
+    response = client.post(
+        f"/projects/{project['id']}/ask",
+        headers=owner["headers"],
+        json={"question": "Where is authentication implemented?", "limit": 3},
+    )
+    assert response.status_code == 501
+    assert "PostgreSQL with pgvector" in response.json()["detail"]
+
+
+def test_rag_route_denies_workspace_non_member(client, authenticated_user):
+    owner = authenticated_user()
+    _, project = create_workspace_project(client, owner, "Private RAG project")
+    outsider = authenticated_user()
+
+    response = client.post(
+        f"/projects/{project['id']}/ask",
+        headers=outsider["headers"],
+        json={"question": "authentication", "limit": 5},
+    )
+    assert response.status_code == 403

@@ -14,10 +14,13 @@ from app.schemas.repository import (
     RepositoryResponse,
     SemanticSearchRequest,
     SemanticSearchResponse,
+    RAGAskRequest,
+    RAGAskResponse,
 )
 from app.services.repository_ingestion_service import RepositoryIngestionService
 from app.services.embedding_service import EmbeddingService
 from app.services.semantic_search_service import SemanticSearchService
+from app.services.rag_service import RAGService
 
 router = APIRouter(prefix="/projects", tags=["Repositories"])
 
@@ -134,3 +137,30 @@ def search_project_code(
     _permission=Depends(require_project_permission(Permission.PROJECT_VIEW)),
 ):
     return SemanticSearchService(db).search(project_id, payload.query, payload.limit)
+
+
+@router.post(
+    "/{project_id}/ask",
+    response_model=RAGAskResponse,
+    summary="Answer a grounded question about project code",
+    description="Requires project:view. Retrieves project-scoped code with Day 12 semantic search and generates an answer only from cited retrieved chunks.",
+    responses={
+        401: {"model": ErrorResponse, "description": "Authentication is invalid."},
+        403: {"model": ErrorResponse, "description": "The user lacks project:view permission."},
+        404: {"model": ErrorResponse, "description": "Project is missing or archived."},
+        422: {"model": ErrorResponse, "description": "Question or limit is invalid."},
+        429: {"model": ErrorResponse, "description": "The LLM provider rate limit was exceeded."},
+        501: {"model": ErrorResponse, "description": "Semantic search requires PostgreSQL with pgvector."},
+        502: {"model": ErrorResponse, "description": "Embedding or LLM output failed validation."},
+        503: {"model": ErrorResponse, "description": "The LLM provider is not configured."},
+        504: {"model": ErrorResponse, "description": "The LLM provider timed out."},
+    },
+)
+def ask_project_code(
+    project_id: UUID,
+    payload: RAGAskRequest,
+    current_user=Depends(get_current_active_user),
+    db: Session = Depends(get_db),
+    _permission=Depends(require_project_permission(Permission.PROJECT_VIEW)),
+):
+    return RAGService(db).ask(project_id, payload.question, payload.limit)
